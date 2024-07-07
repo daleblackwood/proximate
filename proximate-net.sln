@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.002.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Proximate.Tests", "Proximate.Tests\Proximate.Tests.csproj", "{4830D14D-7408-4E09-860D-39B9EA78A3EC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Proximate", "Proximate\Proximate.csproj", "{350E9420-FAF8-46C1-8A1C-48660F12399D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4830D14D-7408-4E09-860D-39B9EA78A3EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4830D14D-7408-4E09-860D-39B9EA78A3EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4830D14D-7408-4E09-860D-39B9EA78A3EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4830D14D-7408-4E09-860D-39B9EA78A3EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{350E9420-FAF8-46C1-8A1C-48660F12399D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{350E9420-FAF8-46C1-8A1C-48660F12399D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{350E9420-FAF8-46C1-8A1C-48660F12399D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{350E9420-FAF8-46C1-8A1C-48660F12399D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C21833A7-F57E-4086-A9FF-F120F9A42323}
+	EndGlobalSection
+EndGlobal
