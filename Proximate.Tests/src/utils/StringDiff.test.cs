@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Xunit;
 
 namespace Proximate.Tests;
@@ -32,20 +31,20 @@ public class StringDiffTest
             labels = ["a", "b", "c"],
             values = [1, 2, 3]
         };
-        var strA = JsonSerializer.Serialize(a);
+        var strA = Json.Serialize(a);
         var b = new OperateSimpleJsonData
         {
             name = "Named Thing",
             labels = ["a", "b", "d"],
             values = [1, 4, 3]
         };
-        var strB = JsonSerializer.Serialize(b);
+        var strB = Json.Serialize(b);
 
         var diffs = StringDiff.Calculate(strA, strB);
         var strPatched = StringDiff.Apply(strA, diffs);
         Assert.True(strB == strPatched, "Patched string should match target string");
 
-        var c = JsonSerializer.Deserialize<OperateSimpleJsonData>(strPatched);
+        var c = Json.Deserialize<OperateSimpleJsonData>(strPatched);
         Assert.True(b.labels[2] == c.labels[2], "Patched label should match target label");
         Assert.True(b.values[1] == c.values[1], "Patched value should match target value");
     }
@@ -77,8 +76,8 @@ public class StringDiffTest
             b.data.Add(i % 3 == 0 ? dataB : dataA);
         }
 
-        var strA = JsonSerializer.Serialize(a);
-        var strB = JsonSerializer.Serialize(b);
+        var strA = Json.Serialize(a);
+        var strB = Json.Serialize(b);
         var diffs = StringDiff.Calculate(strA, strB);
         var strPatched = StringDiff.Apply(strA, diffs);
         Assert.True(strB == strPatched, "Patched string should match target string");

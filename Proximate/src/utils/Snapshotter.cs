@@ -4,7 +4,7 @@ public class Snapshotter
 {
     public class Snapshot
     {
-        public DateTime Time { get; set; } = DateTime.UnixEpoch;
+        public DateTime Time { get; set;}
         public bool IsKey { get; set; } = true;
         public string Value { get; set; } = string.Empty;
         public int Length => Value?.Length ?? 0;
@@ -14,7 +14,7 @@ public class Snapshotter
 
     public int Count => snapshots.Count;
     public DateTime LastUpdate => snapshots.Count > 0 ? snapshots[^1].Time : DateTime.UnixEpoch;
-
+    
     public bool AddValue(DateTime time, string value, bool isKey)
     {
         if (snapshots.Count < 2)
@@ -25,6 +25,7 @@ public class Snapshotter
         var prev = ReadValueAtIndex(snapshots.Count - 1);
         if (prev == value)
             return false;
+
 
         var snapshot = new Snapshot
         {
@@ -85,16 +86,27 @@ public class Snapshotter
         return result;
     }
 
+    public bool IsKey(int index)
+    {
+        if (index < 0 || index >= snapshots.Count)
+        {
+            return false;
+        }
+        return snapshots[index].IsKey;
+    }
+
     public int FindIndex(DateTime time)
     {
-        for (int i = 0; i < snapshots.Count; i++)
+        if (snapshots.Count > 0)
         {
-            if (snapshots[i].Time > time)
+            for (int i = snapshots.Count - 1; i >= 0; i--)
             {
-                return i;
+                if (snapshots[i].Time <= time)
+                {
+                    return i;
+                }
             }
         }
-
         return -1;
     }
 

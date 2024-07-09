@@ -8,12 +8,14 @@ public class ProxyRecorder
     private readonly IProxy proxy;
     private Snapshotter snapshotter = new();
     private Timer? pollTimer = null;
-    private uint snapshotIntervalMs = 120000;
-    private uint tickIntervalMs = 5000;
+    private uint snapshotIntervalMs;
+    private uint tickIntervalMs;
 
-    public ProxyRecorder(IProxy proxy)
+    public ProxyRecorder(IProxy proxy, uint tickIntervalMs = 1000, uint snapshotIntervalMs = 120000)
     {
         this.proxy = proxy;
+        this.tickIntervalMs = tickIntervalMs;
+        this.snapshotIntervalMs = snapshotIntervalMs;
     }
 
     public void Start()
@@ -49,7 +51,8 @@ public class ProxyRecorder
         if (IsRunning)
         {
             var last = snapshotter.GetLastKeySnapshot();
-            var isKey = last == null || (DateTime.UtcNow - last.Time).TotalMilliseconds > snapshotIntervalMs;
+            var lastDuration = last == null ? snapshotIntervalMs : (DateTime.UtcNow - last.Time).TotalMilliseconds;
+            var isKey = lastDuration >= snapshotIntervalMs;
             snapshotter.AddValue(DateTime.UtcNow, content, isKey);
         }
 
@@ -58,5 +61,15 @@ public class ProxyRecorder
         Console.WriteLine($"snapshots count: {snapshotter.Count} last update: {DateTime.UtcNow}, diff size: {lastSnap?.Length ?? 0}, key size: {lastKey?.Length ?? 0}");
 
         IsUpdating = false;
+    }
+
+    public string? Read(DateTime time)
+    {
+        return snapshotter.ReadValueAtTime(time);
+    }
+
+    public string? Read(uint delayMs = 0)
+    {
+        return Read(DateTime.Now.AddMilliseconds(-delayMs));
     }
 }

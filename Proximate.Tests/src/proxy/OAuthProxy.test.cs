@@ -13,7 +13,7 @@ public class OAuthTest
     }
 
     [Fact]
-    public async Task ShouldPassOAuth()
+    public async Task PassOAuth()
     {
         LoadDemo();
 
