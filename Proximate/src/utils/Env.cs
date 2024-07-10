@@ -10,6 +10,35 @@ public static class Env
         API_CLIENT_SECRET,
         API_AUDIENCE
     }
+
+    public enum OperationMode
+    {
+        Development,
+        Testing,
+        Production
+    }
+
+    public static void SetOperationMode(OperationMode mode)
+    {
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", mode.ToString());
+    }
+
+    public static OperationMode GetOperationMode()
+    {
+        var mode = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (mode == "Production")
+        {
+            return OperationMode.Production;
+        }
+        else if (mode == "Testing")
+        {
+            return OperationMode.Testing;
+        }
+        else
+        {
+            return OperationMode.Development;
+        }
+    }
     
     public static string Get(string key, bool required = false)
     {

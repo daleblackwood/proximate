@@ -70,6 +70,6 @@ public class ProxyRecorder
 
     public string? Read(uint delayMs = 0)
     {
-        return Read(DateTime.Now.AddMilliseconds(-delayMs));
+        return Read(DateTime.UtcNow.AddMilliseconds(-delayMs));
     }
 }

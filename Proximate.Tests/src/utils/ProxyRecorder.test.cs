@@ -16,16 +16,15 @@ public class ProxyRecorderTest
         var start = DateTime.UtcNow;
         recorder.Start();
 
-        await Task.Delay(10);
+        await Task.Delay(20);
 
         for (var i = 0; i < 10; i++)
         {
-            await Task.Delay((int)intervalMs);
-
             var snap = Json.TryParse<MockTimeProxy.Response>(recorder.Read()!);
+            var targetTime = start.AddMilliseconds(i * intervalMs + 20);
             Assert.True(snap != null, "Should have valid state");
-            //AssertUtil.IsTimeWithin(snap.time, start + TimeSpan.FromMilliseconds((i + 1) * intervalMs), (int)intervalMs, $"Snapshot {i} should be at about {i * intervalMs}ms");
-            AssertUtil.IsTimeWithin(snap.time, start + TimeSpan.FromMilliseconds((i + 1) * intervalMs), 500, $"Snapshot {i} should be at about {i * intervalMs}ms");
+            AssertUtils.IsTimeWithin(snap.time, targetTime, 40, $"Bad time {i}");
+            await Task.Delay((int)intervalMs);
         }
     }
 
@@ -39,11 +38,13 @@ public class ProxyRecorderTest
 
         var start = DateTime.UtcNow;
         recorder.Start();
-        var firstDelay = (int)snapshotMs + 10;
-        await Task.Delay(firstDelay);
-        
-        var snap = Json.TryParse<MockTimeProxy.Response>(recorder.Read()!);
-        Assert.True(snap != null, "Should have valid state");
-        AssertUtil.IsTimeWithin(snap.time, start.AddMilliseconds(firstDelay), 50, "Should correct time.");
+
+        var bufferMs = 200u;
+        var waitMs = 510;
+        await Task.Delay(waitMs);
+
+        var snap = Json.TryParse<MockTimeProxy.Response>(recorder.Read(bufferMs));
+        Assert.True(snap != null, "Should have valid state 2");
+        AssertUtils.IsTimeWithin(snap.time, start.AddMilliseconds(waitMs - bufferMs), 40, "Should correct time.");
     }
 }

@@ -1,7 +1,14 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+using RequiredAttribute = System.Text.Json.Serialization.JsonRequiredAttribute;
 
 namespace Proximate;
+
+public class StrictAttribute : Attribute {}
+
+public class RequiredAttribute : Attribute {}
 
 public static class Json
 {
@@ -15,6 +22,29 @@ public static class Json
             new JsonStringEnumConverter(),
             new JsonDateTimeConverter(),
             new JsonTimeSpanConverter()
+        },
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver
+        {
+            Modifiers =
+            {
+                static typeInfo =>
+                {
+                    if (typeInfo.Kind != JsonTypeInfoKind.Object)
+                        return;
+
+                    var isStrict = typeInfo.GetType().GetCustomAttribute<StrictAttribute>() != null;
+
+                    foreach (JsonPropertyInfo propertyInfo in typeInfo.Properties)
+                    {
+                        if (isStrict || propertyInfo.AttributeProvider == null)
+                        {
+                            propertyInfo.IsRequired = true;
+                            continue;
+                        }
+                        propertyInfo.IsRequired = propertyInfo.AttributeProvider!.GetCustomAttributes(true)!.Any(x => x.GetType() == typeof(RequiredAttribute));
+                    }
+                }
+            }
         }
     };
 
@@ -28,16 +58,23 @@ public static class Json
 
     public static T Deserialize<T>(string? json)
     {
-        if (string.IsNullOrEmpty(json))
+        try 
         {
-            throw new Exception("Failed to deserialize JSON: empty input");
+            if (string.IsNullOrEmpty(json))
+            {
+                throw new Exception("empty input");
+            }
+            T? result = JsonSerializer.Deserialize<T>(json, DefaultOptions);
+            if (result == null)
+            {
+                throw new Exception("null output");
+            }
+            return result!;
         }
-        var result = JsonSerializer.Deserialize<T>(json, DefaultOptions);
-        if (result == null)
+        catch (Exception ex)
         {
-            throw new Exception("Failed to deserialize JSON");
+            throw new Exception("Failed to deserialize JSON: " + ex.Message);
         }
-        return result;
     }
 
     public static T? TryParse<T>(string? json)

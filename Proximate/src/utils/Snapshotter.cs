@@ -64,13 +64,30 @@ public class Snapshotter
 
     public string ReadValueAtIndex(int index)
     {
-        string result = string.Empty;
+        var lastKeyIndex = -1;
         for (int i = index; i >= 0; i--)
+        {
+            if (snapshots[i].IsKey)
+            {
+                lastKeyIndex = i;
+                break;
+            }
+        }
+        if (lastKeyIndex < 0)
+        {
+            return string.Empty;
+        }
+        var result = snapshots[lastKeyIndex].Value;
+        if (lastKeyIndex == index)
+        {
+            return result;
+        }
+        for (int i = lastKeyIndex + 1; i <= index; i++)
         {
             var snapshot = snapshots[i];
             try
             {
-                result = StringDiff.Apply(snapshot.Value, result);
+                result = StringDiff.Apply(result, snapshot.Value);
             }
             catch (Exception ex)
             {
@@ -82,7 +99,6 @@ public class Snapshotter
                 break;
             }
         }
-
         return result;
     }
 
@@ -101,7 +117,8 @@ public class Snapshotter
         {
             for (int i = snapshots.Count - 1; i >= 0; i--)
             {
-                if (snapshots[i].Time <= time)
+                var snapshot = snapshots[i];
+                if (snapshot.Time <= time)
                 {
                     return i;
                 }

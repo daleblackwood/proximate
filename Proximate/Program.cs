@@ -22,7 +22,10 @@ internal class Program
     static void SetupServer()
     {
         server = new WebServer("http://localhost:5050")
-            .WithWebApi("/", cfg => cfg.RegisterController<ProxyEndpoint>());
+            .WithStaticFolder("/viewer", Env.ProjectPath("public/viewer"), false)
+            .WithWebApi("/", cfg => {
+                cfg.RegisterController<ProxyEndpoint>();
+            });
         _ = server.RunAsync();
     }
 

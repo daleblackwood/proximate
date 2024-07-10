@@ -5,7 +5,7 @@ namespace Proximate.Tests;
 public class SnapshotterTest
 {
     [Fact]
-    public async Task IndexCorrectly()
+    public void IndexCorrectly()
     {
         var snapshotter = new Snapshotter();
         snapshotter.AddValue(DateTime.UnixEpoch, "0", true);
@@ -30,7 +30,7 @@ public class SnapshotterTest
     }
 
     [Fact]
-    public async Task IndexCorrectlyAtSmallScale()
+    public void IndexCorrectlyAtSmallScale()
     {
         var snapshotter = new Snapshotter();
         snapshotter.AddValue(DateTime.UnixEpoch, "0", true);
@@ -50,7 +50,7 @@ public class SnapshotterTest
     {
         var proxy = new MockTimeProxy();
         var snapshotter = new Snapshotter();
-        var start = DateTime.UtcNow;
+        var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         for (var i = 0; i < 10; i++)
         {
@@ -70,7 +70,7 @@ public class SnapshotterTest
         var compareStr = snapshotter.ReadValueAtTime(compareTime);
         var compareData = Json.TryParse<MockTimeProxy.Response>(compareStr);
         Assert.True(compareData != null, "Should have valid state at 100ms");
-        AssertUtil.IsTimeWithin(compareTime, compareData!.time, 1);
+        AssertUtils.IsTimeWithin(compareTime, compareData!.time, 1);
 
         await Task.Delay(100);
 
@@ -78,7 +78,7 @@ public class SnapshotterTest
         compareStr = snapshotter.ReadValueAtTime(compareTime);
         compareData = Json.TryParse<MockTimeProxy.Response>(compareStr);
         Assert.True(compareData != null, "Should have valid state at 900ms");
-        AssertUtil.IsTimeWithin(compareTime, compareData!.time, 1);
+        AssertUtils.IsTimeWithin(compareTime, compareData!.time, 1);
 
         await Task.Delay(100);
 
@@ -86,7 +86,7 @@ public class SnapshotterTest
         compareStr = snapshotter.ReadValueAtTime(compareTime.AddHours(1));
         compareData = Json.TryParse<MockTimeProxy.Response>(compareStr);
         Assert.True(compareData != null, "Should have valid state at past last state");
-        AssertUtil.IsTimeWithin(compareTime, compareData!.time, 1);
+        AssertUtils.IsTimeWithin(compareTime, compareData!.time, 1);
     }
 
 }

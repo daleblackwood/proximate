@@ -1,4 +1,4 @@
-using Proximate;
+using System.Text.Json.Serialization;
 using Xunit;
 
 namespace Proximate.Tests;
@@ -7,7 +7,19 @@ public class JsonTest
 {
     class JsonTestData
     {
+        [Required]
         public DateTime time { get; set; }
+    }
+
+    [Fact]
+    public void ThrowsBadTypes()
+    {
+        var invalidJson = "invalid-json";
+        var validJson = "{ \"a\": 1 }";
+        Assert.ThrowsAny<Exception>(() => Json.Deserialize<JsonTestData>(invalidJson));
+        Assert.Null(Json.TryParse<JsonTestData>(invalidJson));
+        Assert.ThrowsAny<Exception>(() => Json.Deserialize<JsonTestData>(validJson));
+        Assert.Null(Json.TryParse<JsonTestData>(validJson));
     }
 
 
@@ -17,14 +29,7 @@ public class JsonTest
         var str = "{\"time\":\"2025-01-01T00:00:00.000Z\"}";
         var a = Json.TryParse<JsonTestData>(str);
         Assert.True(a != null, "Should be able to parse json");
-        try 
-        {
-            a = Json.Deserialize<JsonTestData>(str);
-        } 
-        catch
-        {
-            Assert.Fail("Did not parse json");
-        }
+        Json.Deserialize<JsonTestData>(str);
         Assert.True(a.time.Kind == DateTimeKind.Utc, "Time should be in UTC");
         Assert.Equal(2025, a.time.Year);
         Assert.Equal(1, a.time.Month);

@@ -1,3 +1,4 @@
+using EmbedIO;
 using Proximate;
 
 public class ProxyEndpoint : Endpoint
@@ -5,7 +6,7 @@ public class ProxyEndpoint : Endpoint
     private RestProxy? proxy;
 
     [Get("proxy")]
-    public async Task<string> GetProxy()
+    public async Task GetProxy()
     {
         if (proxy == null)
         {
@@ -17,6 +18,12 @@ public class ProxyEndpoint : Endpoint
             );
             proxy.SetAuthorizer(authorizer);
         }
-        return await proxy.Update();
+
+        var result = await proxy.Update();
+        
+        using (var writer = HttpContext.OpenResponseText())
+        {
+            await writer.WriteAsync(result);
+        }
     }
 }

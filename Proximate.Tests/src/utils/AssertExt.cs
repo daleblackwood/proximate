@@ -9,7 +9,7 @@ public static class AssertUtil
         var diffMs = (a - b).TotalMilliseconds;
         if (Math.Abs(diffMs) > maxMilliseconds)
         {
-            var prefix = string.IsNullOrEmpty(message) ? "FAIL" : $"{message}: ";
+            var prefix = string.IsNullOrEmpty(message) ? "" : $"{message}: ";
             Assert.Fail($"{prefix}{a} was not within {maxMilliseconds}ms of {b}, is {diffMs}ms");
         }
     }
