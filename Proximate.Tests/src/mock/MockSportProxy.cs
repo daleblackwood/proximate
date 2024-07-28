@@ -5,6 +5,9 @@ public class MockSportProxy : IProxy
 
     public const uint DEFAULT_MATCH_DURATION_MS = 60000 * 90;
 
+    public const string ID = "mock-sport-proxy";
+    public string Id => ID;
+
     public class Response
     {
         public required DateTime time { get; set;}
@@ -37,6 +40,11 @@ public class MockSportProxy : IProxy
         "Bulldogs", "Saints", "Dockers", "Tigers"
     ];
 
+
+    public string LastResult { get; private set; } = string.Empty;
+    public DateTime LastUpdateTime => currentTime;
+    
+
     private DateTime rngTime = DateTime.UtcNow;
     private DateTime currentTime = DateTime.UtcNow;
     private uint matchDurationMs = DEFAULT_MATCH_DURATION_MS;
@@ -56,9 +64,10 @@ public class MockSportProxy : IProxy
     public async Task<string> Update()
     {
         var response = GenerateResponse(currentTime);
-        var result = Json.Serialize(response);
+        LastResult = Json.Serialize(response);
         await Task.Delay(1);
-        return result;
+        currentTime = currentTime.AddMilliseconds(1);
+        return LastResult;
     }
 
     public Response GenerateResponse(DateTime time)

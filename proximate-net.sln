@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Proximate.Tests", "Proximat
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Proximate", "Proximate\Proximate.csproj", "{350E9420-FAF8-46C1-8A1C-48660F12399D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deploy", "Proximate.Deploy\Proximate.Deploy.csproj", "{B3A9B395-5FBA-49CE-92E4-DB2DD6F415DC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

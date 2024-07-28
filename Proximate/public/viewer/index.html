@@ -48,20 +48,20 @@
     width: var(--nav-width);
   }
 
-  main nav div {
-    margin: 0 0 1em;
-  }
+    main nav div {
+      margin: 0 0 1em;
+    }
 
-  main nav label {
-    display: block;
-  }
+    main nav label {
+      display: block;
+    }
 
-  main nav label span {
-    font-family: monospace;
-    background-color: black;
-    color: greenyellow;
-    margin: 1em;
-  }
+      main nav label span {
+        font-family: monospace;
+        background-color: black;
+        color: greenyellow;
+        margin: 1em;
+      }
 
   main nav input, main nav select {
     width: 100%;
@@ -78,12 +78,19 @@
     <div>
       <label for="endpoint">Endpoint <span></span></label>
       <select id="endpoint" onchange="setEndpoint(this.value)">
-        <option>proxy</option>
+        <option>live</option>
+        <option>playback</option>
       </select>
     </div>
     <div>
       <label for="delay">Delay <span></span></label>
       <input id="delay" type="range" min="0" max="240" value="0" onchange="setDelay(this.value)" />
+    </div>
+    <div>
+      <label for="update">Update <span></span></label>
+    </div>
+    <div>
+      <label for="status">Status <span></span></label>
     </div>
   </nav>
 </main>
@@ -110,7 +117,9 @@
   function nextTick() {
     if (isUpdating) return;
     isUpdating = true;
-    const url = "/" + endpoint;
+    const url = `/${endpoint}?delay=${delay}`;
+    setLabelValue("status", "sending");
+    const requestStart = new Date();
     fetch(url)
       .then(x => x.text())
       .then(x => {
@@ -118,7 +127,11 @@
         const container = document.querySelector(`main > .json`);
         const str = JSON.stringify(JSON.parse(x), null, "  ");
         container.innerText = str;
+        const requestEnd = new Date();
+        setLabelValue("status", "idle");
+        setLabelValue("update", requestEnd.toISOString() + " " + (requestEnd - requestStart) + "ms");
       })
+      .catch(e => setLabelValue("status", "error"))
       .finally(_ => isUpdating = false);
   }
 

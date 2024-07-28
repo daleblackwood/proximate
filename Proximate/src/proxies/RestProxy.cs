@@ -4,10 +4,15 @@ namespace Proximate;
 
 public class RestProxy : IProxy
 {
+    public static string ToId(string url) => "rest-" + url;
+
+    public string Id => ToId(url);
+
+    public string LastResult { get; private set; } = string.Empty;
+    public DateTime LastUpdateTime { get; private set; } = DateTime.UnixEpoch;
+
     private string url;
     private uint minPollIntervalMs = 200;
-    private DateTime lastUpdateTime = DateTime.UnixEpoch;
-    private string lastResult = string.Empty;
     private readonly HttpClient client = new();
     private IProxyAuthorizer? authorizer;
 
@@ -17,6 +22,7 @@ public class RestProxy : IProxy
         this.url = url;
         this.minPollIntervalMs = minPollDurationMs;
         client.Timeout = TimeSpan.FromSeconds(5);
+        ProxyManager.Inst.Register(this);
     }
 
     public void SetHeader(string key, string value)
@@ -31,14 +37,14 @@ public class RestProxy : IProxy
 
     public async Task<string> Update()
     {
-        var msSincePoll = (DateTime.UtcNow - lastUpdateTime).TotalMilliseconds;
+        var msSincePoll = (DateTime.UtcNow - LastUpdateTime).TotalMilliseconds;
         if (msSincePoll < minPollIntervalMs)
-            return lastResult;
+            return LastResult;
 
         var result = await Fetch();
-        lastResult = result;
-        lastUpdateTime = DateTime.UtcNow;
-        return lastResult;
+        LastResult = result;
+        LastUpdateTime = DateTime.UtcNow;
+        return LastResult;
     }
 
     private async Task<string> Fetch()

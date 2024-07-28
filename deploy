@@ -1,0 +1,45 @@
+#!/bin/bash
+
+APP_DIR="Proximate"
+DEPLOY_DIR="Proximate.Deploy"
+IMAGE_NAME="proximate"
+ENV_FILE="$DEPLOY_DIR/sample.env"
+STACK=dev
+
+function env() {
+    source $ENV_FILE
+}
+
+function image_build() {
+    env
+    docker build -t $IMAGE_NAME $APP_DIR
+}
+
+function image_run() {
+    image_build
+    docker run -p 5050:5050 --rm $IMAGE_NAME "$@"
+}
+
+function image_shell() {
+    image_run /bin/bash
+}
+
+function push_up() {
+    env
+    pulumi up -s $STACK -c $DEPLOY_DIR
+}
+
+function pull_down() {
+    env
+    pulumi destroy -s $STACK -c $DEPLOY_DIR
+}
+
+ACTIONS="image_build|image_run|image_shell|push_up|pull_down"
+ACTION=$1; shift
+if declare -f "$ACTION" > /dev/null; then
+    # Call the function dynamically with remaining arguments
+    "$ACTION" "$@"
+else
+    echo "Usage: $0 {$ACTIONS} [additional arguments]"
+    exit 1
+fi
