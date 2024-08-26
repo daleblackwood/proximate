@@ -10,10 +10,30 @@ public class Snapshotter
         public int Length => Value?.Length ?? 0;
     }
 
+    public class SnapshotResult
+    {
+        public readonly string Value;
+        public readonly DateTime Time;
+
+        public SnapshotResult(string value, DateTime time)
+        {
+            this.Value = value;
+            this.Time = time;
+        }
+
+        public override string ToString()
+        {
+            return Value;
+        }
+    }
+
     private readonly List<Snapshot> snapshots = new();
 
-    public int Count => snapshots.Count;
     public DateTime LastUpdate => snapshots.Count > 0 ? snapshots[^1].Time : DateTime.UnixEpoch;
+
+    public uint Count { get; private set; } = 0u;
+    public uint KeyCount { get; private set; } = 0u;
+    public ulong StorageSize { get; private set; } = 0u;
     
     public bool AddValue(DateTime time, string value, bool isKey)
     {
@@ -23,7 +43,7 @@ public class Snapshotter
         }
 
         var prev = ReadValueAtIndex(snapshots.Count - 1);
-        if (prev == value)
+        if (prev?.Value == value)
             return false;
 
 
@@ -38,20 +58,26 @@ public class Snapshotter
         {
             try
             {
-                snapshot.Value = StringDiff.Calculate(prev, value);
+                snapshot.Value = StringDiff.Calculate(prev!.Value, value);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to calculate diff: {ex.Message}");
+                Log.Error($"Failed to calculate diff: {ex.Message}");
                 return false;
             }
         }
 
         snapshots.Add(snapshot);
+        StorageSize += (ulong)snapshot.Length;
+        Count++;
+        if (isKey)
+        {
+            KeyCount++;
+        }
         return true;
     }
 
-    public string? ReadValueAtTime(DateTime time)
+    public SnapshotResult? ReadValueAtTime(DateTime time)
     {
         int index = FindIndex(time);
         if (index < 0)
@@ -62,7 +88,7 @@ public class Snapshotter
         return ReadValueAtIndex(index);
     }
 
-    public string ReadValueAtIndex(int index)
+    public SnapshotResult? ReadValueAtIndex(int index)
     {
         var lastKeyIndex = -1;
         for (int i = index; i >= 0; i--)
@@ -75,31 +101,34 @@ public class Snapshotter
         }
         if (lastKeyIndex < 0)
         {
-            return string.Empty;
+            return null;
         }
         var result = snapshots[lastKeyIndex].Value;
+        var resultTime = snapshots[lastKeyIndex].Time;
         if (lastKeyIndex == index)
         {
-            return result;
+            return new SnapshotResult(result, resultTime);
         }
+
         for (int i = lastKeyIndex + 1; i <= index; i++)
         {
             var snapshot = snapshots[i];
             try
             {
                 result = StringDiff.Apply(result, snapshot.Value);
+                resultTime = snapshot.Time;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to apply diff: {ex.Message}");
-                return string.Empty;
+                Log.Error($"Failed to apply diff: {ex.Message}");
+                return null;
             }
             if (snapshot.IsKey)
             {
                 break;
             }
         }
-        return result;
+        return new SnapshotResult(result, resultTime);
     }
 
     public bool IsKey(int index)

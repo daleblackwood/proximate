@@ -31,8 +31,8 @@
     display: flex;
     gap: 1em;
     padding: 1em;
-    margin: 1em;
-    --nav-width: 150px;
+    margin: 0.5em;
+    --nav-width: 250px;
   }
 
   main .json {
@@ -73,24 +73,21 @@
 
 <body>
 <main>
-  <pre class="json"></pre>
+  <pre id="printout" class="json"></pre>
   <nav>
     <div>
       <label for="endpoint">Endpoint <span></span></label>
       <select id="endpoint" onchange="setEndpoint(this.value)">
-        <option>live</option>
-        <option>playback</option>
+        <option>playback/time</option>
+        <option>playback/tab</option>
+        <option>live/time</option>
+        <option>live/tab</option>
+        <option>status</option>
       </select>
     </div>
-    <div>
-      <label for="delay">Delay <span></span></label>
-      <input id="delay" type="range" min="0" max="240" value="0" onchange="setDelay(this.value)" />
-    </div>
-    <div>
-      <label for="update">Update <span></span></label>
-    </div>
-    <div>
-      <label for="status">Status <span></span></label>
+    <div id="delay-params">
+      <label for="delay">Delay (Mins)<span></span></label>
+      <input id="delay" type="range" min="0" max="60" step="1" value="0" onchange="setDelay(this.value)" oninput="setProvisionalDelay(this.value)" />
     </div>
   </nav>
 </main>
@@ -100,8 +97,12 @@
   let endpoint = document.querySelector("select[id=endpoint]").value
   let timer = 0;
   let isUpdating = false;
+  let loaded = false;
   let data;
   let jsv;
+  let printElem = document.getElementById("printout");
+
+  const headerFields = ["head", "last", "first", "polled", "storage", "snapshots", "keys"];
 
   function init() {
     update();
@@ -109,46 +110,98 @@
 
   function update() {
     clearInterval(timer);
-    setLabelValue("delay", delay + "ms");
+    updateLabels();
+    timer = setInterval(nextTick, 500);
+  }
+
+  function updateLabels() {
+    setLabelValue("delay", formatTime(delay));
     setLabelValue("endpoint", endpoint);
-    timer = setInterval(nextTick, 200);
+    document.getElementById("delay-params").style.visibility = endpoint.startsWith("playback") ? "visible" : "hidden";
+    printElem.style.opacity = loaded ? "1.0" : "0.5";
   }
 
   function nextTick() {
     if (isUpdating) return;
     isUpdating = true;
+    loaded = false;
     const url = `/${endpoint}?delay=${delay}`;
+    updateLabels();
     setLabelValue("status", "sending");
     const requestStart = new Date();
     fetch(url)
-      .then(x => x.text())
-      .then(x => {
-        console.log("x", x);
+      .then(response => {
+        const { headers, status } = response;
+        return response.text()
+          .then(text => ({ headers, status, text }))
+          .catch(e => ({ headers, status, text: "error" }));
+      })
+      .then(({ headers, status, text }) => {
+        const isError = text === "error";
+        loaded = true;
+        let str = "";
+        if (headers) {
+          str += "Headers:\n\t";
+          for (const pair of headers.entries()) {
+            str += pair[0] + '=' + pair[1] + ' ';
+          }
+        }
+        str += '\nBody:\n';
         const container = document.querySelector(`main > .json`);
-        const str = JSON.stringify(JSON.parse(x), null, "  ");
+        if (text) {
+          str += JSON.stringify(JSON.parse(text), null, "  ");
+        } else {
+          str += "(empty)";
+        }
         container.innerText = str;
         const requestEnd = new Date();
+        updateLabels();
         setLabelValue("status", "idle");
-        setLabelValue("update", requestEnd.toISOString() + " " + (requestEnd - requestStart) + "ms");
+        for (const field of headerFields) {
+          setLabelValue(field, headers.get(field))
+        }
       })
-      .catch(e => setLabelValue("status", "error"))
+      .catch(e => {
+        loaded = false;
+        console.error(e);
+        updateLabels();
+        setLabelValue("status", "error"); 
+      })
       .finally(_ => isUpdating = false);
   }
 
   function setLabelValue(label, value) {
-    const elem = document.querySelector(`main > nav label[for=${label}]`);
+    const container = document.querySelector("main > nav");
+    let elem = container.querySelector(`label[for=${label}]`);
+    if (!elem) {
+      elem = document.createElement("label");
+      elem.setAttribute("for", label);
+      elem.innerText = label;
+
+      const div = document.createElement("div");
+      div.appendChild(elem);
+
+      container.appendChild(div);
+    }
     let span = elem.querySelector("span");
     if (!span) {
       span = document.createElement("span");
-      label.appendChild(span);
+      elem.appendChild(span);
+    }
+    const dateMatch = value.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d/);
+    if (dateMatch) {
+      value = formatDateTime(value);
     }
     span.innerText = value;
   }
 
   function setDelay(value) {
-    console.log(value);
-    delay = value;
+    delay = value * 60;
     update();
+  }
+  
+  function setProvisionalDelay(value) {
+    setLabelValue("delay", formatTime(value * 60));
   }
 
   function setEndpoint(value) {
@@ -158,6 +211,30 @@
 
   function getData() {
     return data;
+  }
+
+  function formatTime(seconds) {
+    const secs = Math.floor(seconds % 60);
+    const mins = Math.floor(seconds / 60);
+    return `${mins}:${String(secs).padStart(2, "0")}`;
+  }
+
+  function formatDateTime(date) {
+    if (typeof date === "string") {
+      date = new Date(date);
+    }
+    if (!date || Number.isNaN(date.getTime())) {
+      return "-";
+    }
+    return `${
+        date.getHours()
+      }:${
+        date.getMinutes().toString().padStart(2, "0")
+      }:${
+        date.getSeconds().toString().padStart(2, "0")
+      } ${
+        date.getDate()}/${date.getMonth() + 1
+      }`;
   }
 
   init();

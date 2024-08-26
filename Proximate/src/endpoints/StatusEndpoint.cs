@@ -1,7 +1,7 @@
 
 namespace Proximate;
 
-public class HealthEndpoint : Endpoint
+public class StatusEndpoint : Endpoint
 {
     public enum HealthStatus
     {
@@ -12,21 +12,27 @@ public class HealthEndpoint : Endpoint
 
     }
 
+    public class RecorderHealth
+    {
+        public string Status { get; set; }
+        public DateTime? First { get; set; }
+        public DateTime? Last { get; set; }
+        public string Size { get; set; }
+    }
+
     public class HealthResult
     {
         public DateTime Time { get; set; } = DateTime.UtcNow;
-        public Dictionary<string, string> Status { get; set; } = new();
-        public Dictionary<string, DateTime> Updates { get; set; } = new();
+        public Dictionary<string, RecorderHealth> Recorders { get; set; } = new();
     }
 
-    public override Task<object> Get(Payload context)
+    public override Task<object> Get(EndpointContext context)
     {
         var result = new HealthResult();
-        var proxies = ProxyManager.Inst.GetAll();
-        foreach (var proxy in proxies)
+        var recorders = Services.Get<ProxyRecorderService>().GetAll();
+        foreach (var recorder in recorders)
         {
-            var lastUpdate = proxy.LastUpdateTime;
-            result.Updates.Add(proxy.Id, proxy.LastUpdateTime);
+            var lastUpdate = recorder.LastUpdateTime;
             var status = HealthStatus.OK;
             if (lastUpdate.Year == DateTime.UnixEpoch.Year)
             {
@@ -40,7 +46,12 @@ public class HealthEndpoint : Endpoint
             {
                 status = HealthStatus.STALE;
             }
-            result.Status.Add(proxy.Id, status.ToString());
+            result.Recorders[recorder.Id] = new RecorderHealth {
+                First = recorder.FirstSnapshot?.Time,
+                Last = recorder.LastUpdateTime,
+                Size = (recorder.StorageSize / 1024 / 1024).ToString("0.00") + "mb",
+                Status = status.ToString()
+            };
         }
         return Task.FromResult<object>(result);
     }

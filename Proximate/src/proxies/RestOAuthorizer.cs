@@ -52,7 +52,7 @@ public class RestOAuthorizer : IProxyAuthorizer
         {
             try
             {
-                Console.WriteLine($"Getting access token from {tokenUrl}...");
+                Log.Info($"Getting access token from {tokenUrl}...");
                 var formData = new Dictionary<string, string>
                 {
                     { "grant_type", "client_credentials" },
@@ -92,7 +92,7 @@ public class RestOAuthorizer : IProxyAuthorizer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting access token: {ex.Message}");
+                Log.Info($"Error getting access token: {ex.Message}");
                 nextRefreshTime = DateTime.UtcNow;
                 return null;
             }

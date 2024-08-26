@@ -3,22 +3,16 @@ using Proximate;
 
 public class LiveEndpoint : Endpoint
 {
-    public override async Task<object> Get(Payload context)
+    public override async Task<object> Get(EndpointContext context)
     {
-        var proxyUrl = Env.Get(Env.Key.API_URL, true);
-        var proxy = ProxyManager.Inst.Get(RestProxy.ToId(proxyUrl));
-        if (proxy == null)
+        var project = context.GetPath(1)?.ToLower();
+        if (string.IsNullOrEmpty(project))
         {
-            var restProxy = new RestProxy(proxyUrl, 5000);
-            var authorizer = new RestOAuthorizer(
-                Env.Get(Env.Key.API_OAUTH_URL, true), 
-                Env.Get(Env.Key.API_CLIENT_ID, true), 
-                Env.Get(Env.Key.API_CLIENT_SECRET, true)
-            );
-            restProxy.SetAuthorizer(authorizer);
-            proxy = ProxyManager.Inst.Register(restProxy);
+            throw new HttpException(System.Net.HttpStatusCode.NotFound);
         }
 
+        var config = ProxyConfig.Load(project);
+        var proxy = config.CreateRestProxy();
         var result = await proxy.Update();
         return result;
     }

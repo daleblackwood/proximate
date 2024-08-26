@@ -22,7 +22,6 @@ public class RestProxy : IProxy
         this.url = url;
         this.minPollIntervalMs = minPollDurationMs;
         client.Timeout = TimeSpan.FromSeconds(5);
-        ProxyManager.Inst.Register(this);
     }
 
     public void SetHeader(string key, string value)
@@ -52,7 +51,7 @@ public class RestProxy : IProxy
         try
         {
             var time = DateTime.UtcNow;
-            Console.WriteLine($"Fetching data from {url}...");
+            Log.Info($"Fetching data from {url}...");
             if (authorizer != null)
             {
                 await authorizer.Authorize(client);
@@ -63,7 +62,7 @@ public class RestProxy : IProxy
             }
             var response = await client.GetAsync(url);
             var duration = (DateTime.UtcNow - time).TotalMilliseconds;
-            Console.WriteLine($"Fetched from {url} in {duration}ms.");
+            Log.Info($"Fetched from {url} in {duration}ms.");
             var code = response.EnsureSuccessStatusCode()?.StatusCode;
             if (code != HttpStatusCode.OK)
             {
@@ -74,7 +73,7 @@ public class RestProxy : IProxy
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching data: {ex.Message}");
+            Log.Info($"Error fetching data: {ex.Message}");
             return string.Empty;
         }
     }
