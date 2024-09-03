@@ -13,4 +13,18 @@ public static class AssertUtils
             Assert.Fail($"{prefix}{a} was not within {maxMilliseconds}ms of {b}, is {diffMs}ms");
         }
     }
+
+    public static void ThrowSync(Action action, string message = "")
+    {
+        var threw = false;
+        try 
+        {
+            action.Invoke();
+        }
+        catch
+        {
+            threw = true;
+        }
+        Assert.True(threw, string.IsNullOrEmpty(message) ? "method should have thrown" : message);
+    }
 }

@@ -5,7 +5,7 @@ public class StatusEndpoint : Endpoint
 {
     public enum HealthStatus
     {
-        EMPTY,
+        INIT,
         OK,
         DEAD,
         STALE
@@ -14,10 +14,10 @@ public class StatusEndpoint : Endpoint
 
     public class RecorderHealth
     {
-        public string Status { get; set; }
+        public string Status { get; set; } = "INIT";
         public DateTime? First { get; set; }
         public DateTime? Last { get; set; }
-        public string Size { get; set; }
+        public string Size { get; set; } = "0mb";
     }
 
     public class HealthResult
@@ -36,7 +36,7 @@ public class StatusEndpoint : Endpoint
             var status = HealthStatus.OK;
             if (lastUpdate.Year == DateTime.UnixEpoch.Year)
             {
-                status = HealthStatus.EMPTY;
+                status = HealthStatus.INIT;
             }
             else if ((DateTime.UtcNow - lastUpdate).TotalDays > 30.0)
             {

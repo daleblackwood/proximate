@@ -9,6 +9,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 COPY --from=build /app/publish .
 COPY public ./public
-COPY static ./static
+COPY config ./config
 EXPOSE 5050
 CMD ["dotnet", "Proximate.dll"]

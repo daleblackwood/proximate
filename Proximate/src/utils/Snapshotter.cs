@@ -8,6 +8,46 @@ public class Snapshotter
         public bool IsKey { get; set; } = true;
         public string Value { get; set; } = string.Empty;
         public int Length => Value?.Length ?? 0;
+
+        public string? Serialize()
+        {
+            if (string.IsNullOrWhiteSpace(Value))
+            {
+                return null;
+            }
+            var line = Time.ToString("o");
+            line += " " + (IsKey ? "K" : "D");
+            line += " " + Compression.Compress(Value);
+            return line;
+        }
+
+        public static Snapshot Deserialize(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                throw new ArgumentException("Input line cannot be null or empty.", nameof(line));
+            }
+
+            var parts = line.Split(' ', 3);
+            if (parts.Length < 3)
+            {
+                throw new FormatException("Invalid snapshot format.");
+            }
+
+            if (!DateTime.TryParse(parts[0], out var time))
+            {
+                throw new FormatException("Invalid timestamp format.");
+            }
+
+            bool isKey = parts[1] == "K";
+            string decompressedValue = Compression.Decompress(parts[2]);
+
+            return new Snapshot {
+                Time = time,
+                IsKey = isKey,
+                Value = decompressedValue
+            };
+        }
     }
 
     public class SnapshotResult
@@ -17,8 +57,8 @@ public class Snapshotter
 
         public SnapshotResult(string value, DateTime time)
         {
-            this.Value = value;
-            this.Time = time;
+            Value = value;
+            Time = time;
         }
 
         public override string ToString()
@@ -156,6 +196,19 @@ public class Snapshotter
         return -1;
     }
 
+    public Snapshot? GetStoredSnapshot(int index)
+    {
+        if (index < 0 || index >= snapshots.Count)
+            return null;
+
+        return snapshots[index];
+    }
+
+    public int GetStoredSnapshotCount()
+    {
+        return snapshots.Count;
+    }
+
     public Snapshot? GetLastSnapshot()
     {
         if (snapshots.Count == 0)
@@ -164,6 +217,16 @@ public class Snapshotter
         }
 
         return snapshots[^1];
+    }
+
+    public void ClearValuesBefore(DateTime dateTime)
+    {
+        var index = FindIndex(dateTime);
+        if (index < 1)
+        {
+            return;
+        }
+        snapshots.RemoveRange(0, index);
     }
 
     public Snapshot? GetLastKeySnapshot()

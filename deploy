@@ -1,10 +1,10 @@
 #!/bin/bash
 
 APP_DIR="Proximate"
-DEPLOY_DIR="Proximate.Deploy"
+DEPLOY_DIR="./Proximate.Deploy"
 IMAGE_NAME="proximate"
 ENV_FILE="$DEPLOY_DIR/sample.env"
-STACK=dev
+STACK="dev"
 
 function env() {
     source $ENV_FILE
@@ -26,12 +26,15 @@ function image_shell() {
 
 function push_up() {
     env
-    pulumi up -s $STACK -c $DEPLOY_DIR
+    echo "Pushing -s $STACK -C $DEPLOY_DIR..."
+    pulumi up -s $STACK -C $DEPLOY_DIR
 }
 
 function pull_down() {
     env
-    pulumi destroy -s $STACK -c $DEPLOY_DIR
+    echo "Destroying -s $STACK -C $DEPLOY_DIR..."
+    pulumi destroy -s "$STACK" -C "$DEPLOY_DIR"
+    pulumi destroy -s "$STACK" -C "$DEPLOY_DIR"
 }
 
 ACTIONS="image_build|image_run|image_shell|push_up|pull_down"

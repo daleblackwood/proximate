@@ -15,11 +15,11 @@ public class JsonTest
     public void ThrowsBadTypes()
     {
         var invalidJson = "invalid-json";
-        var validJson = "{ \"a\": 1 }";
-        Assert.ThrowsAny<Exception>(() => Json.Deserialize<JsonTestData>(invalidJson));
+        var mismatchedJson = "{ \"a\": 1 }";
+        AssertUtils.ThrowSync(() => Json.Deserialize<JsonTestData>(invalidJson), "should throw on invalid json");
         Assert.Null(Json.TryParse<JsonTestData>(invalidJson));
-        Assert.ThrowsAny<Exception>(() => Json.Deserialize<JsonTestData>(validJson));
-        Assert.Null(Json.TryParse<JsonTestData>(validJson));
+        AssertUtils.ThrowSync(() => Json.Deserialize<JsonTestData>(mismatchedJson), "should throw mismatched json");
+        Assert.Null(Json.TryParse<JsonTestData>(mismatchedJson));
     }
 
 
