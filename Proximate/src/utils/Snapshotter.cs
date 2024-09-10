@@ -34,9 +34,13 @@ public class Snapshotter
                 throw new FormatException("Invalid snapshot format.");
             }
 
-            if (!DateTime.TryParse(parts[0], out var time))
+            if (!DateTime.TryParse(parts[0], null, System.Globalization.DateTimeStyles.AssumeUniversal, out var time))
             {
                 throw new FormatException("Invalid timestamp format.");
+            }
+            if (time.Kind != DateTimeKind.Utc)
+            {
+                time = time.ToUniversalTime();
             }
 
             bool isKey = parts[1] == "K";
@@ -75,7 +79,7 @@ public class Snapshotter
     public uint KeyCount { get; private set; } = 0u;
     public ulong StorageSize { get; private set; } = 0u;
     
-    public bool AddValue(DateTime time, string value, bool isKey)
+    public Snapshot? AddValue(DateTime time, string value, bool isKey)
     {
         if (snapshots.Count < 2)
         {
@@ -84,7 +88,7 @@ public class Snapshotter
 
         var prev = ReadValueAtIndex(snapshots.Count - 1);
         if (prev?.Value == value)
-            return false;
+            return null;
 
 
         var snapshot = new Snapshot
@@ -103,7 +107,7 @@ public class Snapshotter
             catch (Exception ex)
             {
                 Log.Error($"Failed to calculate diff: {ex.Message}");
-                return false;
+                return null;
             }
         }
 
@@ -114,7 +118,7 @@ public class Snapshotter
         {
             KeyCount++;
         }
-        return true;
+        return snapshot;
     }
 
     public SnapshotResult? ReadValueAtTime(DateTime time)

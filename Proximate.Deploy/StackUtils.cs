@@ -8,12 +8,27 @@ using Pulumi.Aws.Ec2.Inputs;
 public static class StackUtils
 {
 
-    public static SecurityGroupIngressArgs[] GetIngress(int[] ports)
+    public static readonly string[] DEFAULT_PROTOCOLS = ["tcp"]; 
+
+    public static SecurityGroupIngressArgs[] GetIngress(int[] ports, string[]? protocols = null)
     {
-        return ports.Select(port => new SecurityGroupIngressArgs {
-            Protocol = "tcp",
-            FromPort = port,
-            ToPort = port,
+        if (protocols == null)
+        {
+            protocols = DEFAULT_PROTOCOLS;
+        }
+        return ports.SelectMany(port => GetIngress(port, port, protocols)).ToArray();
+    }
+
+    public static SecurityGroupIngressArgs[] GetIngress(int fromPort, int toPort, string[]? protocols = null)
+    {
+        if (protocols == null)
+        {
+            protocols = DEFAULT_PROTOCOLS;
+        }
+        return protocols.Select(protocol => new SecurityGroupIngressArgs {
+            Protocol = protocol,
+            FromPort = fromPort,
+            ToPort = toPort,
             CidrBlocks = new List<string> { "0.0.0.0/0" }
         }).ToArray();
     }
@@ -92,9 +107,38 @@ public static class StackUtils
         return value;
     }
 
-    public static string GetDockerInstallScript(string repoNamePrefix)
+    public static string GetDockerInstallScript(string repoNamePrefix, string[]? volumes = null)
     {
+        var volumeStr = "";
+        var mkdirStr = "";
+        if (volumes != null)
+        {
+            for (var i=0; i<volumes.Length; i++)
+            {
+                var path = volumes[i];
+                var pathBits = path.Split(':');
+                if (pathBits.Length != 2)
+                {
+                    throw new Exception("Invalid path: " + path);
+                }
+                foreach (var pathBit in pathBits)
+                {
+                    if (pathBit.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+                    {
+                        throw new Exception("Invalid path: " + path);
+                    }
+                    if (Path.IsPathRooted(pathBit) == false)
+                    {
+                        throw new Exception("Must be absolute path: " + path);
+                    }
+                }
+                volumeStr += "--volume " + path + " ";
+                mkdirStr += "sudo mkdir -p \"" + pathBits[0] + "\"\n";
+            }
+        }
         return $@"#!/bin/bash
+set -e
+
 # Environment
 export AWS_REGION={RequireEnvVar("AWS_REGION")}
 export AWS_ACCESS_KEY_ID={RequireEnvVar("AWS_ACCESS_KEY_ID")}
@@ -111,8 +155,9 @@ sudo usermod -a -G docker ec2-user
 aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_URL
 docker pull $ECR_URL:latest
 
+{mkdirStr}
 # Run the Docker container
-docker run -p 5050:5050 -d $ECR_URL:latest
+docker run {volumeStr} --network host -d $ECR_URL:latest
 ";
     }
 }

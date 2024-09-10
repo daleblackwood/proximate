@@ -11,7 +11,7 @@ public class ProxyRecorderTest
         var proxy = new MockTimeProxy();
         var intervalMs = 100u;
         var snapshotMs = 1000u;
-        var recorder = new ProxyRecorder(proxy, intervalMs, snapshotMs);
+        var recorder = new ConsumerRecorder(proxy, intervalMs, snapshotMs);
 
         var start = DateTime.UtcNow;
         recorder.Start();
@@ -34,7 +34,7 @@ public class ProxyRecorderTest
         var proxy = new MockTimeProxy();
         var intervalMs = 100u;
         var snapshotMs = 1000u;
-        var recorder = new ProxyRecorder(proxy, intervalMs, snapshotMs);
+        var recorder = new ConsumerRecorder(proxy, intervalMs, snapshotMs);
 
         var start = DateTime.UtcNow;
         recorder.Start();

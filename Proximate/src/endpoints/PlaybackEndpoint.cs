@@ -11,10 +11,10 @@ public class PlaybackEndpoint : Endpoint
             throw new HttpException(System.Net.HttpStatusCode.NotFound);
         }
 
-        ProxyRecorder recorder;
+        ConsumerRecorder recorder;
         try 
         {
-            recorder = Services.Get<ProxyRecorderService>().Get(project);
+            recorder = Services.Get<RecorderService>().Get(project);
         } 
         catch (Exception e)
         {
@@ -29,7 +29,7 @@ public class PlaybackEndpoint : Endpoint
             context.SetHeader("Head", Format.DateTime(snapshot.Time.AddSeconds(-delay)));
         }
 
-        context.SetHeader("First", Format.DateTime(recorder.FirstSnapshot?.Time));
+        context.SetHeader("First", Format.DateTime(recorder.FirstUpdateTime));
         context.SetHeader("Last", Format.DateTime(recorder.LastSnapshot?.Time));
         context.SetHeader("Polled", Format.DateTime(recorder.LastUpdateTime));
         context.SetHeader("Storage", $"{Math.Ceiling((double)(recorder.StorageSize / 1024) / 1024 * 100) / 100.0}mb");

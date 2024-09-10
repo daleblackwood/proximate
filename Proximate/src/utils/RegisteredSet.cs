@@ -53,11 +53,11 @@
             }
         }
 
-        public void Deregister(string key) => Deregister(Hash(key));
+        public bool Deregister(string key) => Deregister(Hash(key));
 
-        private void Deregister(int hash)
+        private bool Deregister(int hash)
         {
-            items.Remove(hash);
+            return items.Remove(hash);
         }
 
         public T[] GetAll() => items.Values.ToArray();

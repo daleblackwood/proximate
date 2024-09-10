@@ -2,7 +2,13 @@ namespace Proximate;
 
 public class SnapshotLogger
 {
-    private const string LOG_DIR = "logs"; 
+    public class SnapshotLogState 
+    {
+        public required string id;
+        public required Snapshotter snapshotter;
+        public DateTime lastTime = DateTime.UnixEpoch;
+        public bool isWriting = false;
+    }
 
     public static DateTime StartOfDay(DateTime day)
     {
@@ -23,15 +29,14 @@ public class SnapshotLogger
     {
         var dayStr = GetDayLabel(day);
         var fileName = $"{key}-{dayStr}.log";
-        var logDir = Env.ProjectPath(LOG_DIR);
-        var filePath = Path.Join(logDir, fileName)!;
+        var filePath = Env.ProjectPath("logs/" + fileName)!;
         return filePath;
     }
 
     public DateTime LastDump { get; private set; }
     public DateTime NextDump { get; private set; }
 
-    private Dictionary<string, Snapshotter> snapshotters = new();
+    private Dictionary<string, SnapshotLogState> snapshotters = new();
     private Timer timer;
 
     public SnapshotLogger() 
@@ -40,15 +45,31 @@ public class SnapshotLogger
         var startOfHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc);
         NextDump = startOfHour.AddHours(1);
         timer = new Timer(OnTimer, null, (int)(NextDump - DateTime.UtcNow).TotalMilliseconds, (int)TimeSpan.FromHours(1).TotalMilliseconds);
+        var pathAccess = GetFilePath("test", startOfHour);
+        var dirName = Path.GetDirectoryName(pathAccess);
+         if (dirName != null || Directory.Exists(dirName) == false)
+        {
+            Directory.CreateDirectory(dirName!);
+        }
+        if (Directory.Exists(dirName) == false)
+        {
+            throw new Exception("Directory cannot be written to.");
+        }
+        Log.Info("Logging to " + dirName);
     }
 
-    public void Register(string id, Snapshotter snapshotter)
+    public SnapshotLogState Register(string id, Snapshotter snapshotter)
     {
         if (snapshotters.ContainsKey(id))
         {
             throw new Exception($"Snapshotter {id} is already registered.");
         }
-        snapshotters[id] = snapshotter;
+        var entry = new SnapshotLogState {
+            id = id,
+            snapshotter = snapshotter
+        };
+        snapshotters[id] = entry;
+        return entry;
     }
     
     private void OnTimer(object? state)
@@ -62,53 +83,64 @@ public class SnapshotLogger
         LastDump = DateTime.UtcNow;
     }
 
-    public string? DumpSnapshot(string key, Snapshotter snapshotter, DateTime start, DateTime end)
+    public string? DumpSnapshot(string key, SnapshotLogState entry, DateTime start, DateTime end)
     {
-        var filePath = GetFilePath(key, start);
-        if (filePath == null)
+        if (entry.isWriting)
         {
-            throw new Exception("File path is invalid");
-        }
-        var startIndex = snapshotter.FindIndex(start);
-        if (startIndex < 0)
-        {
-            Log.Info($"Nothing for log for {key}");
-            return null;
-        }
-        var endIndex = snapshotter.FindIndex(end);
-        if (endIndex < 0)
-        {
-            endIndex = snapshotter.GetStoredSnapshotCount();
-        }
-        
-        var dirName = Path.GetDirectoryName(filePath);
-        if (dirName != null || Directory.Exists(dirName) == false)
-        {
-            Directory.CreateDirectory(dirName!);
-        }
-        if (Directory.Exists(dirName) == false)
-        {
-            throw new Exception("Could not access log directory.");
+            throw new FileLoadException("Snapshot is already dumping.");
         }
 
-        using (var writer = new StreamWriter(filePath, append: false))
-        {
-            for (var i = startIndex; i < endIndex; i++)
+        try {
+            entry.isWriting = true;
+            var filePath = GetFilePath(key, start);
+            if (filePath == null)
             {
-                var snapshot = snapshotter.GetStoredSnapshot(i);
-                var line = snapshot?.Serialize();
-                if (string.IsNullOrEmpty(line))
-                {
-                    continue;
-                }
-                writer.WriteLine(line);
+                throw new Exception("File path is invalid");
             }
+            
+            var dirName = Path.GetDirectoryName(filePath);
+            if (Directory.Exists(dirName) == false)
+            {
+                throw new Exception("Could not access log directory.");
+            }
+
+            var snapshotter = entry.snapshotter;
+            var startIndex = snapshotter.FindIndex(start);
+            var snapshotCount = snapshotter.GetStoredSnapshotCount();
+            var storedCount = 0;
+            if (startIndex >= 0)
+            {
+                using (var writer = new StreamWriter(filePath, append: false))
+                {
+                    for (var i = startIndex; i < snapshotCount; i++)
+                    {
+                        var snapshot = snapshotter.GetStoredSnapshot(i);
+                        var line = snapshot?.Serialize();
+                        if (string.IsNullOrEmpty(line) == false)
+                        {
+                            if (snapshot!.Time >= end)
+                                break;
+                            writer.WriteLine(line);
+                            entry.lastTime = snapshot!.Time;
+                            storedCount++;
+                        }
+                    }
+                }
+            }
+            Log.Info($"Logged {storedCount} for {key}");
+            
+            var clearTime = start.AddDays(-2);
+            snapshotter.ClearValuesBefore(clearTime);
+
+            entry.isWriting = false;
+
+            return filePath;
         }
-
-        var clearTime = start.AddDays(-2);
-        snapshotter.ClearValuesBefore(clearTime);
-
-        return filePath;
+        catch
+        {
+            entry.isWriting = false;
+            throw;
+        }
     }
 
 }

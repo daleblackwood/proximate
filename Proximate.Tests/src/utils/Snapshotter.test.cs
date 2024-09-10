@@ -56,7 +56,7 @@ public class SnapshotterTest
         {
             var time = start.AddMilliseconds((i + 1) * 100);
             proxy.SetTime(time);
-            var snapStr = await proxy.Update();
+            var snapStr = (await proxy.Read()).Last().content;
             snapshotter.AddValue(time, snapStr, i % 5 == 0);
         }
 

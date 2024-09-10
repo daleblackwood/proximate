@@ -10,10 +10,10 @@ public class LiveEndpoint : Endpoint
         {
             throw new HttpException(System.Net.HttpStatusCode.NotFound);
         }
-
-        var config = ProxyConfig.Load(project);
-        var proxy = config.CreateRestProxy();
-        var result = await proxy.Update();
+        var config = new ApiConsumer.ApiConfig();
+        config.LoadFile(Env.ProjectPath("config/" + project + ".config"));
+        var consumer = ConsumerFactory.Instance.Build(config);
+        var result = await consumer.Read();
         return result;
     }
 }

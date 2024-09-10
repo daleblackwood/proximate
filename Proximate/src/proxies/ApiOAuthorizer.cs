@@ -1,37 +1,48 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Proximate;
 
-public class RestOAuthorizer : IProxyAuthorizer
+public class ApiOAuthorizer : IAuthorizer
 {
-    // Helper class to deserialize the OAuth response
     private class OAuthTokenResponse
     {
         public string? access_token { get; set; }
         public int expires_in { get; set; }
     }
 
-    public bool IsAuthorized => accessToken != null;
+    public bool IsAuthorized => accessToken != null || HasCredentials == false;
 
     private string tokenUrl;
     private string clientId;
     private string clientSecret;
     private string? audience;
+    private string grantType;
 
     private DateTime nextRefreshTime = DateTime.UnixEpoch;
     private string? accessToken;
 
-    public RestOAuthorizer(string tokenUrl, string clientId, string clientSecret, string? audience = null)
+    private static readonly JsonSerializerOptions JsonOptions = new() { NumberHandling = JsonNumberHandling.AllowReadingFromString };
+
+    private bool HasCredentials => string.IsNullOrEmpty(clientId) == false && string.IsNullOrEmpty(clientSecret) == false;
+
+    // Expands ${VAR} references so credentials can live in the environment instead of config files.
+    private static string ExpandEnv(string value) =>
+        Regex.Replace(value, @"\$\{(\w+)\}", m => Environment.GetEnvironmentVariable(m.Groups[1].Value) ?? "");
+
+    public ApiOAuthorizer(string tokenUrl, string clientId, string clientSecret, string? audience = null, string? grantType = null)
     {
         this.tokenUrl = tokenUrl;
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
+        this.clientId = ExpandEnv(clientId);
+        this.clientSecret = ExpandEnv(clientSecret);
         this.audience = audience;
+        this.grantType = string.IsNullOrWhiteSpace(grantType) ? "client_credentials" : grantType;
     }
 
     public async Task Authorize(HttpClient client)
     {
-        if (DateTime.UtcNow >= nextRefreshTime)
+        if (HasCredentials && DateTime.UtcNow >= nextRefreshTime)
         {
             var nextToken = await GetAccessToken();
             if (string.IsNullOrEmpty(nextToken) == false)
@@ -43,7 +54,10 @@ public class RestOAuthorizer : IProxyAuthorizer
         {
             client.DefaultRequestHeaders.Remove("Authorization");
         }
-        client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
+        if (accessToken != null)
+        {
+            client.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
+        }
     }
 
     private async Task<string?> GetAccessToken()
@@ -53,12 +67,19 @@ public class RestOAuthorizer : IProxyAuthorizer
             try
             {
                 Log.Info($"Getting access token from {tokenUrl}...");
-                var formData = new Dictionary<string, string>
-                {
-                    { "grant_type", "client_credentials" },
-                    { "client_id", clientId },
-                    { "client_secret", clientSecret }
-                };
+                var formData = grantType == "password"
+                    ? new Dictionary<string, string>
+                    {
+                        { "grant_type", "password" },
+                        { "username", clientId },
+                        { "password", clientSecret }
+                    }
+                    : new Dictionary<string, string>
+                    {
+                        { "grant_type", grantType },
+                        { "client_id", clientId },
+                        { "client_secret", clientSecret }
+                    };
 
                 if (audience != null)
                 {
@@ -76,7 +97,7 @@ public class RestOAuthorizer : IProxyAuthorizer
                     throw new Exception("empty response");
                 }
 
-                var tokenResponse = JsonSerializer.Deserialize<OAuthTokenResponse>(responseContent);
+                var tokenResponse = JsonSerializer.Deserialize<OAuthTokenResponse>(responseContent, JsonOptions);
                 if (string.IsNullOrEmpty(tokenResponse?.access_token))
                 {
                    throw new Exception("no access token");

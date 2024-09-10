@@ -1,0 +1,7 @@
+api_url = "https://api.openf1.org/v1/sessions?session_key=latest"
+api_oauth_url = "https://api.openf1.org/token"
+api_oauth_grant = "password"
+api_client_id = "fake-username"
+api_client_secret = "fake-password"
+poll_interval = "10:00"
+key_interval = "2:00:00"

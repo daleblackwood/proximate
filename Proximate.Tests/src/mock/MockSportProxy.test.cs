@@ -29,8 +29,8 @@ public class MockSportProxyTest
         var proxy = new MockSportProxy();
         var time = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
         proxy.Setup(time);
-        var json = await proxy.Update();
-        var parsed = Json.TryParse<MockSportProxy.Response>(json);
+        var data = await proxy.Read();
+        var parsed = Json.TryParse<MockSportProxy.Response>(data[0].content);
         Assert.True(parsed != null, "Should be able to parse json");
         Assert.Equal(time.ToString(), parsed.matches[0].startTime.ToString());
     }
@@ -45,8 +45,8 @@ public class MockSportProxyTest
         proxy.Setup(matchStartTime, matchDurationMs);
         proxy.SetTime(new DateTime(3000, 1, 1));
 
-        var json = await proxy.Update();
-        var endState = Json.TryParse<MockSportProxy.Response>(json);
+        var data = await proxy.Read();
+        var endState = Json.TryParse<MockSportProxy.Response>(data[0].content);
         Assert.True(endState != null, "Should have valid state");
 
         var endScores = new int[endState.matches.Length * 2];
@@ -64,7 +64,8 @@ public class MockSportProxyTest
             var matchEndTime = match.startTime.AddMilliseconds(matchDurationMs);
             proxy.SetTime(matchEndTime);
 
-            var snapshot = Json.TryParse<MockSportProxy.Response>(await proxy.Update());
+            var content = (await proxy.Read()).LastOrDefault()?.content;
+            var snapshot = Json.TryParse<MockSportProxy.Response>(content);
             Assert.True(snapshot != null, "Should have valid end state");
             var matchState = snapshot.matches[i];
             Assert.True(matchState != null, "Should have valid end state");
@@ -78,7 +79,8 @@ public class MockSportProxyTest
             var matchMidTime = match.startTime.AddMilliseconds(matchDurationMs / 2);
             proxy.SetTime(matchMidTime);
 
-            var snapshot = Json.TryParse<MockSportProxy.Response>(await proxy.Update());
+            var content = (await proxy.Read()).LastOrDefault()?.content;
+            var snapshot = Json.TryParse<MockSportProxy.Response>(content);
             Assert.True(snapshot != null, "Should have valid end state");
             var matchState = snapshot.matches[i];
             Assert.True(matchState != null, "Should have valid end state");

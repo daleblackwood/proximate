@@ -19,7 +19,7 @@ class ProximateStack : Stack
 
         var securityGroup = new SecurityGroup(Prefix + "-sg", new() {
             Description = "Proximate Security Group",
-            Ingress = StackUtils.GetIngress([22, 80, 443, 5050]),
+            Ingress = StackUtils.GetIngress(22, 64000, ["tcp", "udp"]),
             Egress = StackUtils.GetEgress()
         });
 
@@ -42,7 +42,10 @@ class ProximateStack : Stack
             ImageTag = "latest"
         });
         
-        var installScript = StackUtils.GetDockerInstallScript(Prefix + "-repo");
+        var installScript = StackUtils.GetDockerInstallScript(Prefix + "-repo", [
+          "/home/ec2-user/proximate/logs:/app/logs",
+          //"/home/ec2-user/proximate/config:/app/config"
+        ]);
         File.WriteAllText(StackUtils.ProjectPath("artefacts/docker-install.sh"), installScript);
 
         var instance = new Instance(Prefix + "-inst", new() {

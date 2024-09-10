@@ -51,65 +51,9 @@ public static class Env
         return isEmpty ? null : value;
     }
 
-    public static string Get(Key key, bool required = false)
+    public static string? Get(Key key, bool required = false)
     {
         return Get(key.ToString(), required);
-    }
-
-    public static void LoadFile(string file)
-    {
-        if (File.Exists(file) == false)
-        {
-            throw new Exception($"File not found: {file}");
-        }
-        var text = File.ReadAllText(file);
-        LoadText(text);
-    }
-
-    public static void LoadText(string text)
-    {
-        var lines = text.Split('\n');
-        foreach (var line in lines)
-        {
-            var parts = line.Split('=', 2);
-            var key = parts[0].Trim();
-            var value = parts.Length > 1 ? parts[1].Trim() : "";
-            if (string.IsNullOrEmpty(value) == false)
-            {
-                if (value.StartsWith("\"") && value.EndsWith("\""))
-                {
-                    value = value.Substring(1, value.Length - 2);
-                }
-                Environment.SetEnvironmentVariable(key, value);
-            }
-        }
-    }
-
-    public static Dictionary<string, string> LoadConfigFile(string path)
-    {
-        var str = File.ReadAllText(ProjectPath(path));
-        return ParseConfig(str);
-    }
-    
-    public static Dictionary<string, string> ParseConfig(string text)
-    {
-        var result = new Dictionary<string, string>();
-        var lines = text.Split('\n');
-        foreach (var line in lines)
-        {
-            var parts = line.Split('=', 2);
-            var key = parts[0].Trim();
-            var value = parts.Length > 1 ? parts[1].Trim() : "";
-            if (string.IsNullOrEmpty(value) == false)
-            {
-                if (value.StartsWith("\"") && value.EndsWith("\""))
-                {
-                    value = value.Substring(1, value.Length - 2);
-                }
-                result[key] = value;
-            }
-        }
-        return result;
     }
 
     private static string? root = null;

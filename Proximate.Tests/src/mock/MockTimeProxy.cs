@@ -1,6 +1,6 @@
 namespace Proximate.Tests;
 
-public class MockTimeProxy : IProxy
+public class MockTimeProxy : IConsumer
 {
     public const int BUILT_IN_DELAY_MS = 1;
 
@@ -13,7 +13,6 @@ public class MockTimeProxy : IProxy
         public DateTime time { get; set; }
     }
 
-    public string LastResult { get; private set; } = string.Empty;
     public DateTime LastUpdateTime { get; private set; } = DateTime.UnixEpoch;
 
     private DateTime? currentTime = null;
@@ -24,16 +23,15 @@ public class MockTimeProxy : IProxy
         currentTime = time;
     }
 
-    public async Task<string> Update()
+    public async Task<ConsumerMessage[]> Read()
     {
-        var response = new Response 
-        { 
-            time = (DateTime)(currentTime != null ? currentTime : DateTime.UtcNow)
-        };
-        LastResult = Json.Serialize(response);
+        var time = (DateTime)(currentTime != null ? currentTime : DateTime.UtcNow);
+        var response = new Response { time = time };
+        var content = Json.Serialize(response);
+        var message = new ConsumerMessage { time = time, content = content };
         await Task.Delay(BUILT_IN_DELAY_MS);
         LastUpdateTime = response.time.AddMilliseconds(BUILT_IN_DELAY_MS);
-        return LastResult;
+        return [message];
     }
 
 }

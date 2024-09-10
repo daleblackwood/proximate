@@ -20,7 +20,7 @@ public class StatusEndpoint : Endpoint
         public string Size { get; set; } = "0mb";
     }
 
-    public class HealthResult
+    public class StatusResult
     {
         public DateTime Time { get; set; } = DateTime.UtcNow;
         public Dictionary<string, RecorderHealth> Recorders { get; set; } = new();
@@ -28,8 +28,8 @@ public class StatusEndpoint : Endpoint
 
     public override Task<object> Get(EndpointContext context)
     {
-        var result = new HealthResult();
-        var recorders = Services.Get<ProxyRecorderService>().GetAll();
+        var result = new StatusResult();
+        var recorders = Services.Get<RecorderService>().GetAll();
         foreach (var recorder in recorders)
         {
             var lastUpdate = recorder.LastUpdateTime;

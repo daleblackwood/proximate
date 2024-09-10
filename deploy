@@ -5,6 +5,7 @@ DEPLOY_DIR="./Proximate.Deploy"
 IMAGE_NAME="proximate"
 ENV_FILE="$DEPLOY_DIR/sample.env"
 STACK="dev"
+APP_PATH="/app/proximate/"
 
 function env() {
     source $ENV_FILE
@@ -17,7 +18,7 @@ function image_build() {
 
 function image_run() {
     image_build
-    docker run -p 5050:5050 --rm $IMAGE_NAME "$@"
+    docker run -p 80:80 -v proximate-logs:/logs --rm $IMAGE_NAME "$@"
 }
 
 function image_shell() {
@@ -37,7 +38,13 @@ function pull_down() {
     pulumi destroy -s "$STACK" -C "$DEPLOY_DIR"
 }
 
-ACTIONS="image_build|image_run|image_shell|push_up|pull_down"
+function publish() {
+    image_build
+    if [ $? -ne 0 ]; then exit 1; fi
+    push_up
+}
+
+ACTIONS="image_build|image_run|image_shell|push_up|pull_down|publish"
 ACTION=$1; shift
 if declare -f "$ACTION" > /dev/null; then
     # Call the function dynamically with remaining arguments

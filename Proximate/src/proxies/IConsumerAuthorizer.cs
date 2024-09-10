@@ -1,6 +1,6 @@
 namespace Proximate;
 
-public interface IProxyAuthorizer
+public interface IAuthorizer
 {
     bool IsAuthorized { get; }
     Task Authorize(HttpClient client);

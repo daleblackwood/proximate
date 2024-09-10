@@ -1,0 +1,8 @@
+# OpenF1 (https://openf1.org): live F1 timing over OAuth. Historical data works without a token.
+api_url = "https://api.openf1.org/v1/sessions?session_key=latest"
+api_oauth_url = "https://api.openf1.org/token"
+api_oauth_grant = "password"
+api_client_id = "${OPENF1_USERNAME}"
+api_client_secret = "${OPENF1_PASSWORD}"
+poll_interval = "1:00"
+key_interval = "30:00"

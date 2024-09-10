@@ -1,6 +1,6 @@
 namespace Proximate.Tests;
 
-public class MockSportProxy : IProxy
+public class MockSportProxy : IConsumer
 {
 
     public const uint DEFAULT_MATCH_DURATION_MS = 60000 * 90;
@@ -40,8 +40,6 @@ public class MockSportProxy : IProxy
         "Bulldogs", "Saints", "Dockers", "Tigers"
     ];
 
-
-    public string LastResult { get; private set; } = string.Empty;
     public DateTime LastUpdateTime => currentTime;
     
 
@@ -61,13 +59,16 @@ public class MockSportProxy : IProxy
         this.currentTime = time;
     }
 
-    public async Task<string> Update()
+    public async Task<ConsumerMessage[]> Read()
     {
         var response = GenerateResponse(currentTime);
-        LastResult = Json.Serialize(response);
+        var message = new ConsumerMessage {
+            time = currentTime,
+            content = Json.Serialize(response)
+        };
         await Task.Delay(1);
         currentTime = currentTime.AddMilliseconds(1);
-        return LastResult;
+        return new ConsumerMessage[] { message };
     }
 
     public Response GenerateResponse(DateTime time)
