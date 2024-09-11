@@ -8,41 +8,41 @@ public class SnapshotterTest
     public void IndexCorrectly()
     {
         var snapshotter = new Snapshotter();
-        snapshotter.AddValue(DateTime.UnixEpoch, "0", true);
-        snapshotter.AddValue(DateTime.UnixEpoch.AddHours(1), "1", true);
-        snapshotter.AddValue(DateTime.UnixEpoch.AddHours(2), "2", true);
+        snapshotter.AddValue(Timing.Epoch, "0", true);
+        snapshotter.AddValue(Timing.Epoch.AddHours(1), "1", true);
+        snapshotter.AddValue(Timing.Epoch.AddHours(2), "2", true);
 
         Assert.True(snapshotter.Count == 3, "Should have 3 snapshots");
         Assert.True(snapshotter.IsKey(0), "Should 0 should be key");
-        Assert.Equal(1, snapshotter.FindIndex(DateTime.UnixEpoch.AddHours(1)));
-        Assert.Equal(2, snapshotter.FindIndex(DateTime.UnixEpoch.AddHours(2)));;
+        Assert.Equal(1, snapshotter.FindIndex(Timing.Epoch.AddHours(1)));
+        Assert.Equal(2, snapshotter.FindIndex(Timing.Epoch.AddHours(2)));;
 
         Assert.Equal("0", snapshotter.ReadValueAtIndex(0)?.Value);
         Assert.Equal("1", snapshotter.ReadValueAtIndex(1)?.Value);
         Assert.Equal("2", snapshotter.ReadValueAtIndex(2)?.Value);
 
-        Assert.Equal("0", snapshotter.ReadValueAtTime(DateTime.UnixEpoch)?.Value);
-        Assert.Equal("0", snapshotter.ReadValueAtTime(DateTime.UnixEpoch.AddMinutes(1))?.Value);
-        Assert.Equal("1", snapshotter.ReadValueAtTime(DateTime.UnixEpoch.AddHours(1))?.Value);
-        Assert.Equal("1", snapshotter.ReadValueAtTime(DateTime.UnixEpoch.AddHours(1.1))?.Value);
-        Assert.Equal("2", snapshotter.ReadValueAtTime(DateTime.UnixEpoch.AddHours(2))?.Value);
-        Assert.Equal("2", snapshotter.ReadValueAtTime(DateTime.UnixEpoch.AddHours(24))?.Value);
+        Assert.Equal("0", snapshotter.ReadValueAtTime(Timing.Epoch)?.Value);
+        Assert.Equal("0", snapshotter.ReadValueAtTime(Timing.Epoch.AddMinutes(1))?.Value);
+        Assert.Equal("1", snapshotter.ReadValueAtTime(Timing.Epoch.AddHours(1))?.Value);
+        Assert.Equal("1", snapshotter.ReadValueAtTime(Timing.Epoch.AddHours(1.1))?.Value);
+        Assert.Equal("2", snapshotter.ReadValueAtTime(Timing.Epoch.AddHours(2))?.Value);
+        Assert.Equal("2", snapshotter.ReadValueAtTime(Timing.Epoch.AddHours(24))?.Value);
     }
 
     [Fact]
     public void IndexCorrectlyAtSmallScale()
     {
         var snapshotter = new Snapshotter();
-        snapshotter.AddValue(DateTime.UnixEpoch, "0", true);
-        snapshotter.AddValue(DateTime.UnixEpoch.AddMilliseconds(1), "1", true);
-        snapshotter.AddValue(DateTime.UnixEpoch.AddMilliseconds(2), "2", true);
+        snapshotter.AddValue(Timing.Epoch, "0", true);
+        snapshotter.AddValue(Timing.Epoch.AddMilliseconds(1), "1", true);
+        snapshotter.AddValue(Timing.Epoch.AddMilliseconds(2), "2", true);
 
         Assert.True(snapshotter.Count == 3, "Should have 3 snapshots");
         Assert.True(snapshotter.IsKey(0), "Should 0 should be key");
-        Assert.Equal(1, snapshotter.FindIndex(DateTime.UnixEpoch.AddMilliseconds(1)));
-        Assert.Equal(2, snapshotter.FindIndex(DateTime.UnixEpoch.AddMilliseconds(2)));
-        Assert.Equal("1", snapshotter.ReadValueAtTime(DateTime.UnixEpoch.AddMilliseconds(1))?.Value);
-        Assert.Equal("2", snapshotter.ReadValueAtTime(DateTime.UnixEpoch.AddMilliseconds(2))?.Value);
+        Assert.Equal(1, snapshotter.FindIndex(Timing.Epoch.AddMilliseconds(1)));
+        Assert.Equal(2, snapshotter.FindIndex(Timing.Epoch.AddMilliseconds(2)));
+        Assert.Equal("1", snapshotter.ReadValueAtTime(Timing.Epoch.AddMilliseconds(1))?.Value);
+        Assert.Equal("2", snapshotter.ReadValueAtTime(Timing.Epoch.AddMilliseconds(2))?.Value);
     }
 
     [Fact]
@@ -93,10 +93,10 @@ public class SnapshotterTest
     public void ClearsValuesBefore()
     {
         var snapshotter = new Snapshotter();
-        snapshotter.AddValue(DateTime.UnixEpoch, "0", true);
-        snapshotter.AddValue(DateTime.UnixEpoch.AddHours(1), "1", true);
-        snapshotter.AddValue(DateTime.UnixEpoch.AddHours(2), "2", true);
-        snapshotter.ClearValuesBefore(DateTime.UnixEpoch.AddHours(2));
+        snapshotter.AddValue(Timing.Epoch, "0", true);
+        snapshotter.AddValue(Timing.Epoch.AddHours(1), "1", true);
+        snapshotter.AddValue(Timing.Epoch.AddHours(2), "2", true);
+        snapshotter.ClearValuesBefore(Timing.Epoch.AddHours(2));
         Assert.Equal(1, snapshotter.GetStoredSnapshotCount());
     }
 

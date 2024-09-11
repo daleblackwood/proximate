@@ -11,6 +11,7 @@ public interface IConsumer
 
     string Id { get; }
     DateTime LastUpdateTime { get; }
+    DateTime NextUpdateTime { get; }
     Task<ConsumerMessage[]> Read();
 }
 

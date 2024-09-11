@@ -13,7 +13,8 @@ public class MockTimeProxy : IConsumer
         public DateTime time { get; set; }
     }
 
-    public DateTime LastUpdateTime { get; private set; } = DateTime.UnixEpoch;
+    public DateTime LastUpdateTime { get; private set; } = Timing.Epoch;
+    public DateTime NextUpdateTime => LastUpdateTime.AddSeconds(1);
 
     private DateTime? currentTime = null;
 
@@ -25,7 +26,7 @@ public class MockTimeProxy : IConsumer
 
     public async Task<ConsumerMessage[]> Read()
     {
-        var time = (DateTime)(currentTime != null ? currentTime : DateTime.UtcNow);
+        var time = (DateTime)(currentTime != null ? currentTime : Timing.Now);
         var response = new Response { time = time };
         var content = Json.Serialize(response);
         var message = new ConsumerMessage { time = time, content = content };

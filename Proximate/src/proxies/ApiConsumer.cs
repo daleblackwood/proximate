@@ -69,7 +69,8 @@ public class ApiConsumer : IConsumer
 
     public string Id { get; private set; }
 
-    public DateTime LastUpdateTime { get; private set; } = DateTime.UnixEpoch;
+    public DateTime LastUpdateTime { get; private set; } = Timing.Epoch;
+    public DateTime NextUpdateTime => LastUpdateTime.AddMilliseconds(minPollIntervalMs);
 
     private string url;
     private uint minPollIntervalMs = 200;
@@ -97,13 +98,13 @@ public class ApiConsumer : IConsumer
 
     public async Task<ConsumerMessage[]> Read()
     {
-        var msSincePoll = (DateTime.UtcNow - LastUpdateTime).TotalMilliseconds;
+        var msSincePoll = Timing.Since(LastUpdateTime).TotalMilliseconds;
         if (msSincePoll < minPollIntervalMs)
             return Array.Empty<ConsumerMessage>();
 
         var message = await Fetch();
         var result = new ConsumerMessage {
-            time = DateTime.UtcNow,
+            time = Timing.Now,
             content = message
         };
         LastUpdateTime = result.time;
@@ -114,7 +115,7 @@ public class ApiConsumer : IConsumer
     {
         try
         {
-            var time = DateTime.UtcNow;
+            var time = Timing.Now;
             Log.Info($"Fetching data from {url}...");
             if (authorizer != null)
             {
@@ -125,8 +126,8 @@ public class ApiConsumer : IConsumer
                 }
             }
             var response = await client.GetAsync(url);
-            var duration = (DateTime.UtcNow - time).TotalMilliseconds;
-            Log.Info($"Fetched from {url} in {duration}ms.");
+            var duration = Timing.Since(time).TotalMilliseconds;
+            Log.Verbose($"Fetched from {url} in {duration}ms.");
             var code = response.EnsureSuccessStatusCode()?.StatusCode;
             if (code != HttpStatusCode.OK)
             {
@@ -137,7 +138,7 @@ public class ApiConsumer : IConsumer
         }
         catch (Exception ex)
         {
-            Log.Info($"Error fetching data: {ex.Message}");
+            Log.Error($"Error fetching data: {ex.Message}");
             return string.Empty;
         }
     }

@@ -107,7 +107,7 @@ public static class StackUtils
         return value;
     }
 
-    public static string GetDockerInstallScript(string repoNamePrefix, string[]? volumes = null)
+    public static string GetDockerInstallScript(string imageUrl, string repoNamePrefix, string[]? volumes = null)
     {
         var volumeStr = "";
         var mkdirStr = "";
@@ -138,11 +138,11 @@ public static class StackUtils
         }
         return $@"#!/bin/bash
 set -e
-
 # Environment
 export AWS_REGION={RequireEnvVar("AWS_REGION")}
 export AWS_ACCESS_KEY_ID={RequireEnvVar("AWS_ACCESS_KEY_ID")}
 export AWS_SECRET_ACCESS_KEY={RequireEnvVar("AWS_SECRET_ACCESS_KEY")}
+export IMAGE_URL=""{imageUrl}""
 export ECR_URL=$(aws ecr describe-repositories --query ""repositories[?starts_with(repositoryName, '{repoNamePrefix}')].repositoryUri | [0]"" --output text)
 
 # Install Docker

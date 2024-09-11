@@ -7,16 +7,16 @@ public class SnapshotLoggerTest
     [Fact]
     public void UnderstandsDaysAndNames()
     {
-        Assert.Equal(1, SnapshotLogger.StartOfDay(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)).Day);
-        Assert.Equal(1, SnapshotLogger.StartOfDay(new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc)).Day);
-        Assert.Equal(2, SnapshotLogger.StartOfDay(new DateTime(2025, 1, 1, 23, 0, 0, DateTimeKind.Utc)).Day);
-        Assert.Equal(1, SnapshotLogger.StartOfDay(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Local)).Day);
-        Assert.Equal(1, SnapshotLogger.StartOfDay(new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Local)).Day);
-        Assert.Equal(1, SnapshotLogger.StartOfDay(new DateTime(2025, 1, 1, 23, 0, 0, DateTimeKind.Local)).Day);
+        Assert.Equal(1, SnapshotLogService.LocalDayStart(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)).Day);
+        Assert.Equal(1, SnapshotLogService.LocalDayStart(new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc)).Day);
+        Assert.Equal(2, SnapshotLogService.LocalDayStart(new DateTime(2025, 1, 1, 23, 0, 0, DateTimeKind.Utc)).Day);
+        Assert.Equal(1, SnapshotLogService.LocalDayStart(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Local)).Day);
+        Assert.Equal(1, SnapshotLogService.LocalDayStart(new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Local)).Day);
+        Assert.Equal(1, SnapshotLogService.LocalDayStart(new DateTime(2025, 1, 1, 23, 0, 0, DateTimeKind.Local)).Day);
 
-        Assert.Equal("2025-01-01", SnapshotLogger.GetDayLabel(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
-        Assert.Equal("2025-01-01", SnapshotLogger.GetDayLabel(new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc)));
-        Assert.Equal("2025-01-02", SnapshotLogger.GetDayLabel(new DateTime(2025, 1, 1, 23, 0, 0, DateTimeKind.Utc)));
+        Assert.Equal("2025-01-01", SnapshotLogService.GetDayLabel(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
+        Assert.Equal("2025-01-01", SnapshotLogService.GetDayLabel(new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc)));
+        Assert.Equal("2025-01-02", SnapshotLogService.GetDayLabel(new DateTime(2025, 1, 1, 23, 0, 0, DateTimeKind.Utc)));
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class SnapshotLoggerTest
         snapshotter.AddValue(date.AddHours(1), "1", false);
         snapshotter.AddValue(date.AddHours(2), "2", false);
 
-        var logger = new SnapshotLogger();
+        var logger = new SnapshotLogService();
         var entry = logger.Register("test", snapshotter);
 
         var outFile = logger.DumpSnapshot("test", entry, date, date.AddHours(1).AddTicks(1));

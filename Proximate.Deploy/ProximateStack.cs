@@ -41,12 +41,6 @@ class ProximateStack : Stack
             Platform = "linux/arm64",
             ImageTag = "latest"
         });
-        
-        var installScript = StackUtils.GetDockerInstallScript(Prefix + "-repo", [
-          "/home/ec2-user/proximate/logs:/app/logs",
-          //"/home/ec2-user/proximate/config:/app/config"
-        ]);
-        File.WriteAllText(StackUtils.ProjectPath("artefacts/docker-install.sh"), installScript);
 
         var instance = new Instance(Prefix + "-inst", new() {
             Tags = StackUtils.GetTags(Prefix + "-inst"),
@@ -55,7 +49,14 @@ class ProximateStack : Stack
             Ami = amiId,
             VpcSecurityGroupIds = new[] { securityGroup.Id },
             KeyName = keyPair.KeyName,
-            UserData = installScript,
+            UserData = image.ImageUri.Apply(imageUri => {        
+                var installScript = StackUtils.GetDockerInstallScript(imageUri, Prefix + "-repo", [
+                    "/home/ec2-user/proximate/logs:/app/logs",
+                    //"/home/ec2-user/proximate/config:/app/config"
+                ]);
+                File.WriteAllText(StackUtils.ProjectPath("artefacts/docker-install.sh"), installScript);
+                return installScript;
+            }),
             UserDataReplaceOnChange = true
         });
 

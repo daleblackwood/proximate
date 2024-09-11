@@ -117,7 +117,7 @@ public class JsonDateTimeConverter : JsonConverter<DateTime>
         var dateString = reader.GetString();
         if (dateString == null)
         {
-            return DateTime.UnixEpoch;
+            return Timing.Epoch;
         }
         var date = DateTime.Parse(dateString);
         var utc = date.ToUniversalTime();

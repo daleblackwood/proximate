@@ -17,12 +17,14 @@ public class StatusEndpoint : Endpoint
         public string Status { get; set; } = "INIT";
         public DateTime? First { get; set; }
         public DateTime? Last { get; set; }
+        public DateTime? Next { get; set; }
+        public DateTime? Polled { get; set; }
         public string Size { get; set; } = "0mb";
     }
 
     public class StatusResult
     {
-        public DateTime Time { get; set; } = DateTime.UtcNow;
+        public DateTime Time { get; set; } = Timing.Now;
         public Dictionary<string, RecorderHealth> Recorders { get; set; } = new();
     }
 
@@ -34,22 +36,24 @@ public class StatusEndpoint : Endpoint
         {
             var lastUpdate = recorder.LastUpdateTime;
             var status = HealthStatus.OK;
-            if (lastUpdate.Year == DateTime.UnixEpoch.Year)
+            if (lastUpdate.Year == Timing.Epoch.Year)
             {
                 status = HealthStatus.INIT;
             }
-            else if ((DateTime.UtcNow - lastUpdate).TotalDays > 30.0)
+            else if (Timing.Since(lastUpdate).TotalDays > 30.0)
             {
                 status = HealthStatus.DEAD;
             }
-            else if ((DateTime.UtcNow - lastUpdate).TotalDays > 1.0)
+            else if (Timing.Since(lastUpdate).TotalDays > 1.0)
             {
                 status = HealthStatus.STALE;
             }
             result.Recorders[recorder.Id] = new RecorderHealth {
-                First = recorder.FirstSnapshot?.Time,
+                First = recorder.FirstUpdateTime,
                 Last = recorder.LastUpdateTime,
-                Size = (recorder.StorageSize / 1024 / 1024).ToString("0.00") + "mb",
+                Next = recorder.Consumer.NextUpdateTime,
+                Size = (recorder.MemorySize / 1024 / 1024).ToString("0.00") + "mb",
+                Polled = recorder.Consumer.LastUpdateTime,
                 Status = status.ToString()
             };
         }

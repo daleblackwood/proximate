@@ -39,6 +39,10 @@ public static class Env
             return OperationMode.Development;
         }
     }
+
+    public static bool IsTestEnvironment => GetOperationMode() == OperationMode.Testing;
+
+    public static bool IsProduction => GetOperationMode() >= OperationMode.Production;
     
     public static string? Get(string key, bool required = false)
     {

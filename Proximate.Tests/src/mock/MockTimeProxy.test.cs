@@ -10,7 +10,7 @@ public class MockTimeProxyTest
     public async Task ProgressTime()
     {
         var proxy = new MockTimeProxy();
-        var start = DateTime.UtcNow;
+        var start = Timing.Now;
         var snapStr = (await proxy.Read()).LastOrDefault()?.content;
         var snap = Json.TryParse<MockTimeProxy.Response>(snapStr);
         Assert.True(snap != null, "Should have valid state 1");

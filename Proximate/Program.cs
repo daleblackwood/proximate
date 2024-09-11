@@ -1,4 +1,5 @@
-﻿using EmbedIO;
+﻿using System.Net;
+using EmbedIO;
 using EmbedIO.Files;
 
 namespace Proximate;
@@ -9,8 +10,8 @@ internal class Program
 
     static void SetupProxies()
     {
-        var logger = new SnapshotLogger();
         var recorderService = Services.Get<RecorderService>();
+        var logger = Services.Get<SnapshotLogService>();
 
         var configDir = Env.ProjectPath("config");
         var monitor = new DirMonitor(configDir);
@@ -32,12 +33,13 @@ internal class Program
                 return;
             }
 
-            double.TryParse(config.Get(ApiConsumer.ApiConfigKey.API_POLL_MINS) ?? "0.25", out double pollMins);
-            var pollDurationMs = (uint)(pollMins * 60000.0);
+            var pollDuration = Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.API_POLL_MINS), TimeSpan.FromMinutes, 10);
+            var pollDurationMs = (uint)pollDuration.TotalMilliseconds;
+            var keyframeInterval = Config.ParseInt(config.Get(ApiConsumer.ApiConfigKey.API_KEY_INTERVAL), 10);
 
             uint.TryParse(config.Get(ApiConsumer.ApiConfigKey.API_KEY_INTERVAL) ?? "10", out uint keyInterval);
 
-            var keyStr = $"every {pollDurationMs / 60000.0} mins, keying 1:{keyInterval}";
+            var keyStr = $"every {pollDurationMs / 60000.0} mins, keying every {pollDurationMs * keyInterval / 60000.0} mins";
             
             var recorder = recorderService.TryGet(id);
             if (recorder == null)
@@ -83,6 +85,18 @@ internal class Program
 
     static void Main(string[] args)
     {
+        Log.Info($"Proximate init.");
+        var environmentName = Env.GetOperationMode().ToString() + " " + IPAddress.Any.ToString();
+        if (Env.IsTestEnvironment == false)
+        {
+            SentrySdk.Init(options => {
+                options.Dsn = "https://d850786f0dd55f313242ba791608989f@o4508956393340928.ingest.us.sentry.io/4508956398256128";
+                options.Debug = false;
+                options.AutoSessionTracking = true;
+                options.Environment = environmentName;
+            });
+        }
+        Log.Info($"Running Proximate as {environmentName}...");
         SetupProxies();
         SetupWebServer();
         while (true)

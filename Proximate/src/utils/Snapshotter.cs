@@ -73,11 +73,11 @@ public class Snapshotter
 
     private readonly List<Snapshot> snapshots = new();
 
-    public DateTime LastUpdate => snapshots.Count > 0 ? snapshots[^1].Time : DateTime.UnixEpoch;
+    public DateTime LastUpdate => snapshots.Count > 0 ? snapshots[^1].Time : Timing.Epoch;
 
     public uint Count { get; private set; } = 0u;
     public uint KeyCount { get; private set; } = 0u;
-    public ulong StorageSize { get; private set; } = 0u;
+    public ulong MemorySize { get; private set; } = 0u;
     
     public Snapshot? AddValue(DateTime time, string value, bool isKey)
     {
@@ -112,7 +112,7 @@ public class Snapshotter
         }
 
         snapshots.Add(snapshot);
-        StorageSize += (ulong)snapshot.Length;
+        MemorySize += (ulong)snapshot.Length;
         Count++;
         if (isKey)
         {

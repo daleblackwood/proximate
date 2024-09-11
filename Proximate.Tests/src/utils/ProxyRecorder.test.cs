@@ -13,7 +13,7 @@ public class ProxyRecorderTest
         var snapshotMs = 1000u;
         var recorder = new ConsumerRecorder(proxy, intervalMs, snapshotMs);
 
-        var start = DateTime.UtcNow;
+        var start = Timing.Now;
         recorder.Start();
 
         await Task.Delay(20);
@@ -36,7 +36,7 @@ public class ProxyRecorderTest
         var snapshotMs = 1000u;
         var recorder = new ConsumerRecorder(proxy, intervalMs, snapshotMs);
 
-        var start = DateTime.UtcNow;
+        var start = Timing.Now;
         recorder.Start();
 
         var bufferMs = 200u;

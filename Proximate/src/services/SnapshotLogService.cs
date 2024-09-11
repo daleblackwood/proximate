@@ -1,16 +1,18 @@
+using Swan;
+
 namespace Proximate;
 
-public class SnapshotLogger
+public class SnapshotLogService : Service
 {
     public class SnapshotLogState 
     {
         public required string id;
         public required Snapshotter snapshotter;
-        public DateTime lastTime = DateTime.UnixEpoch;
+        public DateTime lastTime = Timing.Epoch;
         public bool isWriting = false;
     }
 
-    public static DateTime StartOfDay(DateTime day)
+    public static DateTime LocalDayStart(DateTime day)
     {
         var result = day;
         if (day.Kind != DateTimeKind.Local)
@@ -22,7 +24,7 @@ public class SnapshotLogger
 
     public static string GetDayLabel(DateTime day)
     {
-        return StartOfDay(day).ToString("yyyy-MM-dd");
+        return LocalDayStart(day).ToString("yyyy-MM-dd");
     }
 
     public static string GetFilePath(string key, DateTime day)
@@ -39,13 +41,16 @@ public class SnapshotLogger
     private Dictionary<string, SnapshotLogState> snapshotters = new();
     private Timer timer;
 
-    public SnapshotLogger() 
+    public SnapshotLogService() 
     { 
-        var now = DateTime.UtcNow;
-        var startOfHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0, DateTimeKind.Utc);
-        NextDump = startOfHour.AddHours(1);
-        timer = new Timer(OnTimer, null, (int)(NextDump - DateTime.UtcNow).TotalMilliseconds, (int)TimeSpan.FromHours(1).TotalMilliseconds);
-        var pathAccess = GetFilePath("test", startOfHour);
+        var now = Timing.Now;
+        timer = new Timer(
+            OnTimer, 
+            null, 
+            (int)(Timing.Now.AddSeconds(10).RoundUp(TimeSpan.FromSeconds(10)) - Timing.Now).TotalMilliseconds, 
+            (int)TimeSpan.FromMinutes(1).TotalMilliseconds
+        );
+        var pathAccess = GetFilePath("test", now);
         var dirName = Path.GetDirectoryName(pathAccess);
          if (dirName != null || Directory.Exists(dirName) == false)
         {
@@ -71,19 +76,33 @@ public class SnapshotLogger
         snapshotters[id] = entry;
         return entry;
     }
+
+    public DateTime GetLogTime(string id)
+    {
+        return snapshotters.ContainsKey(id) ? snapshotters[id].lastTime : Timing.Epoch;
+    }
     
     private void OnTimer(object? state)
     {
-        var start = StartOfDay(DateTime.UtcNow);
+        var start = LocalDayStart(Timing.Now);
         var end = start.AddDays(1);
         foreach (var pair in snapshotters)
         {
-            DumpSnapshot(pair.Key, pair.Value, start, end);
+            DumpIncrementalSnapshot(pair.Key, pair.Value, start, end);
         }
-        LastDump = DateTime.UtcNow;
+        LastDump = Timing.Now;
     }
 
-    public string? DumpSnapshot(string key, SnapshotLogState entry, DateTime start, DateTime end)
+    public string? DumpIncrementalSnapshot(string key, SnapshotLogState entry, DateTime start, DateTime end)
+    {
+        if (entry.lastTime > start)
+        {
+            start = entry.lastTime;
+        }
+        return DumpSnapshot(key, entry, start, end, true);
+    }
+
+    public string? DumpSnapshot(string key, SnapshotLogState entry, DateTime start, DateTime end, bool append = false)
     {
         if (entry.isWriting)
         {
@@ -105,12 +124,16 @@ public class SnapshotLogger
             }
 
             var snapshotter = entry.snapshotter;
-            var startIndex = snapshotter.FindIndex(start);
             var snapshotCount = snapshotter.GetStoredSnapshotCount();
+            var startIndex = snapshotter.FindIndex(start);
+            if (snapshotCount > 0 && startIndex < 0 && snapshotter.GetStoredSnapshot(0)!.Time < end)
+            {
+                startIndex = 0;
+            }
             var storedCount = 0;
             if (startIndex >= 0)
             {
-                using (var writer = new StreamWriter(filePath, append: false))
+                using (var writer = new StreamWriter(filePath, append: append))
                 {
                     for (var i = startIndex; i < snapshotCount; i++)
                     {

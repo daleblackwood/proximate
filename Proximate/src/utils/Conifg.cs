@@ -7,6 +7,34 @@ public class Config
 
     public string? Id { get; set; }
 
+    public static TimeSpan ParseSpan(string? value, Func<double, TimeSpan> spanFunc, double? defaultCount = null)
+    {
+        var units = ParseDouble(value, 0.0);
+        if (units > 0.0)
+            return spanFunc(units);
+        if (defaultCount == null)
+            throw new Exception("Could not parse span.");
+        return spanFunc((double)defaultCount);
+    }
+
+    public static double ParseDouble(string? value, double? defaultValue = null)
+    {
+        if (string.IsNullOrEmpty(value) == false && double.TryParse(value, out double parsed))
+            return parsed;
+        if (defaultValue == null)
+            throw new Exception("Could not parse double.");
+        return (double)defaultValue;
+    }
+
+    public static double ParseInt(string? value, int? defaultValue = null)
+    {
+        if (string.IsNullOrEmpty(value) == false && int.TryParse(value, out int parsed))
+            return parsed;
+        if (defaultValue == null)
+            throw new Exception("Could not parse int.");
+        return (int)defaultValue;
+    }
+
     protected void Set(string key, string value)
     {
         if (string.IsNullOrWhiteSpace(key))

@@ -5,18 +5,19 @@ public class ConsumerRecorder
     public bool IsRunning { get; private set; }
     public bool IsUpdating { get; private set; }
 
-    public Snapshotter.SnapshotResult? FirstSnapshot => Snapshotter.ReadValueAtIndex(0);
-
     public Snapshotter.Snapshot? LastSnapshot { get; private set; }
 
     public Snapshotter.Snapshot? LastKeySnapshot { get; private set; }
 
+    public DateTime FirstUpdateTime { get; private set; } = Timing.Epoch;
     public DateTime LastUpdateTime { get; private set; }
-    public DateTime FirstUpdateTime { get; private set; }
+    public DateTime NextUpdateTime => Timing.Greatest(Consumer.NextUpdateTime, LastUpdateTime.AddMilliseconds(tickIntervalMs));
+    public DateTime LastSnapshotTime => LastSnapshot?.Time ?? Timing.Epoch;
+    public DateTime LastKeySnapshotTime => LastKeySnapshot?.Time ?? Timing.Epoch;
 
     public string Id => Consumer.Id;
 
-    public ulong StorageSize => Snapshotter.StorageSize;
+    public ulong MemorySize => Snapshotter.MemorySize;
     public ulong KeyshotCount => Snapshotter.KeyCount;
     public ulong SnapshotCount => Snapshotter.Count;
     
@@ -71,7 +72,7 @@ public class ConsumerRecorder
         var messages = await Consumer.Read();
         if (messages.Length > 0)
         {
-            if (FirstUpdateTime == DateTime.UnixEpoch)
+            if (FirstUpdateTime == Timing.Epoch)
             {
                 FirstUpdateTime = messages[0].time;
             }
@@ -85,11 +86,11 @@ public class ConsumerRecorder
                     lastKey = LastKeySnapshot;
                 }
             }
-            LastUpdateTime = messages[2].time;
+            LastUpdateTime = messages[^1].time;
         }
         LastSnapshot = Snapshotter.GetLastSnapshot();
         LastKeySnapshot = Snapshotter.GetLastKeySnapshot();
-        Log.Info($"snapshots count: {Snapshotter.Count} last update: {DateTime.UtcNow}, diff size: {LastSnapshot?.Length ?? 0}, key size: {LastKeySnapshot?.Length ?? 0}");
+        Log.Verbose($"snapshots count: {Snapshotter.Count} last update: {Timing.Now}, diff size: {LastSnapshot?.Length ?? 0}, key size: {LastKeySnapshot?.Length ?? 0}");
         IsUpdating = false;
     }
 
@@ -100,6 +101,6 @@ public class ConsumerRecorder
 
     public Snapshotter.SnapshotResult? Read(uint delayMs = 0)
     {
-        return Read(DateTime.UtcNow.AddMilliseconds(-delayMs));
+        return Read(Timing.Now.AddMilliseconds(-delayMs));
     }
 }

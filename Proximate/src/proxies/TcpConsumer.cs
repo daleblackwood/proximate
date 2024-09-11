@@ -72,7 +72,8 @@ public class TcpConsumer : IConsumer
     public int Port { get; private set; }
     public TcpMode Mode { get; private set; } = TcpMode.ASCII;
 
-    public DateTime LastUpdateTime { get; private set; } = DateTime.UnixEpoch;
+    public DateTime LastUpdateTime { get; private set; } = Timing.Epoch;
+    public DateTime NextUpdateTime => LastUpdateTime.AddTicks(1);
 
     private TcpListener? listener;
     private CancellationTokenSource? cts;
@@ -136,7 +137,7 @@ public class TcpConsumer : IConsumer
 
                 var result = new ConsumerMessage
                 {
-                    time = DateTime.UtcNow,
+                    time = Timing.Now,
                     content = messageContent
                 };
 

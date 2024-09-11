@@ -41,10 +41,12 @@ public class MockSportProxy : IConsumer
     ];
 
     public DateTime LastUpdateTime => currentTime;
+
+    public DateTime NextUpdateTime => currentTime.AddTicks(1);
     
 
-    private DateTime rngTime = DateTime.UtcNow;
-    private DateTime currentTime = DateTime.UtcNow;
+    private DateTime rngTime = Timing.Now;
+    private DateTime currentTime = Timing.Now;
     private uint matchDurationMs = DEFAULT_MATCH_DURATION_MS;
 
     public void Setup(DateTime startTime, uint matchDurationMs = DEFAULT_MATCH_DURATION_MS)
@@ -73,7 +75,7 @@ public class MockSportProxy : IConsumer
 
     public Response GenerateResponse(DateTime time)
     {
-        var rng = new Random((int)(rngTime - DateTime.UnixEpoch).TotalMilliseconds);
+        var rng = new Random((int)(rngTime - Timing.Epoch).TotalMilliseconds);
 
         // generate competitors and scores
         var competitors = new List<Competitor>();

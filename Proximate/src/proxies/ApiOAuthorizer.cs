@@ -20,7 +20,7 @@ public class ApiOAuthorizer : IAuthorizer
     private string? audience;
     private string grantType;
 
-    private DateTime nextRefreshTime = DateTime.UnixEpoch;
+    private DateTime nextRefreshTime = Timing.Epoch;
     private string? accessToken;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { NumberHandling = JsonNumberHandling.AllowReadingFromString };
@@ -42,7 +42,7 @@ public class ApiOAuthorizer : IAuthorizer
 
     public async Task Authorize(HttpClient client)
     {
-        if (HasCredentials && DateTime.UtcNow >= nextRefreshTime)
+        if (HasCredentials && Timing.Now >= nextRefreshTime)
         {
             var nextToken = await GetAccessToken();
             if (string.IsNullOrEmpty(nextToken) == false)
@@ -66,7 +66,7 @@ public class ApiOAuthorizer : IAuthorizer
         {
             try
             {
-                Log.Info($"Getting access token from {tokenUrl}...");
+                Log.Verbose($"Getting access token from {tokenUrl}...");
                 var formData = grantType == "password"
                     ? new Dictionary<string, string>
                     {
@@ -107,14 +107,14 @@ public class ApiOAuthorizer : IAuthorizer
                 {
                     tokenResponse.expires_in = 3600;
                 }
-                nextRefreshTime = DateTime.UtcNow.AddSeconds(tokenResponse!.expires_in / 2);
+                nextRefreshTime = Timing.Now.AddSeconds(tokenResponse!.expires_in / 2);
 
                 return tokenResponse!.access_token;
             }
             catch (Exception ex)
             {
-                Log.Info($"Error getting access token: {ex.Message}");
-                nextRefreshTime = DateTime.UtcNow;
+                Log.Error($"Error getting access token: {ex.Message}");
+                nextRefreshTime = Timing.Now;
                 return null;
             }
         }

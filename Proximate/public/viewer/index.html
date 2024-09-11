@@ -96,12 +96,13 @@
     let endpoint = endpointSelector.value;
     let timer = 0;
     let isUpdating = false;
-    let loaded = false;
+    let isLoaded = false;
     let data;
     let jsv;
     let printElem = document.getElementById("printout");
+    let results = {};
 
-    const headerFields = ["head", "last", "first", "polled", "storage", "snapshots", "keys"];
+    const headerFields = ["head", "last", "first", "polled", "next", "log", "in-memory", "snapshots", "keys"];
 
     function init() {
         load();
@@ -109,10 +110,19 @@
 
     function load() {
         fetch("/feeds").then(x => x.json()).then(feeds => {
+            feeds.sort();
+            const preferred = "playback/time";
+            let hasPreffered = false;
             for (const feed of feeds) {
                 var option = document.createElement("option");
                 option.innerText = feed;
                 endpointSelector.appendChild(option);
+                if (feed == preferred) {
+                    hasPreffered = true;
+                }
+            }
+            if (hasPreffered) {
+                endpoint = endpointSelector.value = preferred;
             }
             update();
         })
@@ -128,13 +138,13 @@
         setLabelValue("delay", formatTime(delay));
         setLabelValue("endpoint", endpoint);
         document.getElementById("delay-params").style.visibility = endpoint.startsWith("playback") ? "visible" : "hidden";
-        printElem.style.opacity = loaded ? "1.0" : "0.5";
+        printElem.style.opacity = isLoaded ? "1.0" : "0.5";
     }
 
     function nextTick() {
         if (isUpdating) return;
         isUpdating = true;
-        loaded = false;
+        isLoaded = false;
         const url = `/${endpoint}?delay=${delay}`;
         updateLabels();
         setLabelValue("status", "sending");
@@ -148,36 +158,53 @@
             })
             .then(({ headers, status, text }) => {
                 const isError = text === "error";
-                loaded = true;
-                let str = "";
-                if (headers) {
-                    str += "Headers:\n\t";
-                    for (const pair of headers.entries()) {
-                        str += pair[0] + '=' + pair[1] + ' ';
-                    }
-                }
-                str += '\nBody:\n';
-                const container = document.querySelector(`main > .json`);
-                if (text && text?.match(/^\s*[\{\[]/)) {
-                    str += JSON.stringify(JSON.parse(text), null, "  ");
-                } else {
-                    str += "(empty)";
-                }
-                container.innerText = str;
-                const requestEnd = new Date();
-                updateLabels();
-                setLabelValue("status", "idle");
-                for (const field of headerFields) {
-                    setLabelValue(field, headers.get(field))
-                }
+                isLoaded = true;
+                results[endpoint] = { headers, status, text, isLoaded, isError };
+                displayResults(results[endpoint]);
             })
             .catch(e => {
-                loaded = false;
+                isLoaded = false;
                 console.error(e);
                 updateLabels();
                 setLabelValue("status", "error"); 
             })
             .finally(_ => isUpdating = false);
+    }
+
+    function displayResults(result, nowLoaded) {
+        const container = document.querySelector(`main > .json`);
+        if (result) {
+            const { headers, status, text, isError } = result;
+            if (typeof nowLoaded === "boolean") {
+                isLoaded = nowLoaded;
+            }
+            let str = "";
+            if (headers) {
+                str += "Headers:\n\t";
+                for (const pair of headers.entries()) {
+                    str += pair[0] + '=' + pair[1] + ' ';
+                }
+            }
+            str += '\nBody:\n';
+            if (text && text?.match(/^\s*[\{\[]/)) {
+                str += JSON.stringify(JSON.parse(text), null, "  ");
+            } else {
+                str += "(empty)";
+            }
+            container.innerText = str;
+            const requestEnd = new Date();
+            updateLabels();
+            setLabelValue("status", "idle");
+            for (const field of headerFields) {
+                setLabelValue(field, headers.get(field))
+            }
+        } else {
+            updateLabels();
+            for (const field of headerFields) {
+                setLabelValue(field, "");
+            }
+            container.innerText = "";
+        }
     }
 
     function setLabelValue(label, value) {
@@ -215,8 +242,11 @@
     }
 
     function setEndpoint(value) {
-        endpoint = value;
-        update();
+        if (endpoint !== value) {
+            endpoint = value;
+            displayResults(results[endpoint], false);
+            update();
+        }
     }
 
     function getData() {
