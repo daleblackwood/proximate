@@ -52,7 +52,7 @@ class ProximateStack : Stack
             UserData = image.ImageUri.Apply(imageUri => {        
                 var installScript = StackUtils.GetDockerInstallScript(imageUri, Prefix + "-repo", [
                     "/home/ec2-user/proximate/logs:/app/logs",
-                    //"/home/ec2-user/proximate/config:/app/config"
+                    "/home/ec2-user/proximate/config:/app/config"
                 ]);
                 File.WriteAllText(StackUtils.ProjectPath("artefacts/docker-install.sh"), installScript);
                 return installScript;
@@ -61,6 +61,12 @@ class ProximateStack : Stack
         });
 
         PublicIp = instance.PublicIp;
+
+        Output.All([instance.PublicIp, image.ImageUri]).Apply(outputs => {
+            var str = $"OUTPUT_INSTANCE_IP=\"{outputs[0]}\"\nOUTPUT_IMAGE_URI=\"{outputs[1]}\"";
+            File.WriteAllText(StackUtils.ProjectPath("artefacts/output.sh"), str);
+            return str;
+        });
     }
 
     [Output]

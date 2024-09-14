@@ -1,6 +1,7 @@
 using EmbedIO;
 using Proximate;
 
+[AccessRequired]
 public class LiveEndpoint : Endpoint
 {
     public override async Task<object> Get(EndpointContext context)

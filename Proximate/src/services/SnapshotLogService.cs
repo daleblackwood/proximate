@@ -4,6 +4,7 @@ namespace Proximate;
 
 public class SnapshotLogService : Service
 {
+
     public class SnapshotLogState 
     {
         public required string id;

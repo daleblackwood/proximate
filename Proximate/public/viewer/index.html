@@ -14,6 +14,7 @@
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         min-height: 100vh; 
         overflow: hidden;
+        font-size: 11pt;
     }
 
     h1, h2, h3, h4, h5, h6 {
@@ -33,6 +34,10 @@
         padding: 1em;
         margin: 0.5em;
         --nav-width: 250px;
+    }
+
+    input, button {
+        font-size: inherit;
     }
 
     main .json {
@@ -71,6 +76,34 @@
         transition: opacity 0.2s linear;
     }
 
+    #blocker {
+        position: fixed;
+        inset: 0px;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        overflow-y: auto;
+    }
+
+    #blocker > main {
+        background-color: #444444;
+        color: #FFFFFF;
+        width: fit-content;
+        height: fit-content;
+        padding: 1.5rem 2rem 2rem;
+        display: flex;
+        flex-direction: column;
+        font-size: 13pt;
+    }
+
+    #blocker > main > h3 {
+        margin: 0 0 0.5em;
+        text-align: center;
+    }
+
 </style>
 
 </head>
@@ -105,11 +138,81 @@
     const headerFields = ["head", "last", "first", "polled", "next", "log", "in-memory", "snapshots", "keys"];
 
     function init() {
-        load();
+        load().catch(showLogin);
+    }
+    
+    function showLogin(e) {
+        setForm("Login", ["email:email", "password:password", "submit:submit"], data => {
+            setBlocker();
+            fetch("/auth", { headers: { 
+                Authorization: `Basic ${btoa(`${data.email}:${data.password}`)}` }
+            }).then(x => {
+                if (x.status === 403) throw new Error("Unknown User")
+                return x.text();
+            }).then(x => {
+                localStorage.setItem("lvt", x);
+                load().catch(showLogin);
+            }).catch(e => setError(e.toString(), "Login Error", showLogin));
+        });
+    }
+
+    function setForm(title, fieldNames, onSubmit) {
+        const form = document.createElement("form");
+        const fields = fieldNames.map(x => {
+            const [name, type = "text"] = x.split(":");
+            const elem = document.createElement("input");
+            elem.setAttribute("name", name);
+            elem.setAttribute("type", type);
+            form.appendChild(elem);
+            return elem;
+        })
+        form.onsubmit = e => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const data = {};
+            for (const field of fields) {
+                data[field.name] = field.value;
+            }
+            onSubmit(data);
+            return false;
+        };
+        setBlocker(form, title);
+        return { form, fields };
+    }
+
+    function setError(error, title, onClick) {
+        const btn = document.createElement("button");
+        btn.innerText = "OK";
+        btn.onclick = e => {
+            e.preventDefault()
+            onClick && onClick();
+        };
+        setBlocker(btn, title || "Error", error)
+    }
+
+    function setBlocker(elem, title, description) {
+        document.getElementById("blocker")?.remove();
+        if (!elem) return;
+        const blocker = document.createElement("div");
+        blocker.id = "blocker";
+        const main = blocker.appendChild(document.createElement("main"));
+        if (title) main.appendChild(document.createElement("h3")).innerText = title;
+        if (description) main.appendChild(document.createElement("p")).innerText = description;
+        main.appendChild(elem);
+        document.body.app
+        endChild(blocker);
+    }
+
+    function api(url, msg) {
+        return fetch(url, {
+            headers: { "Authorization": "Bearer " + localStorage.getItem("lvt") },
+            method: msg ? "POST" : "GET",
+            body: msg ? JSON.stringify(msg) : undefined
+        });
     }
 
     function load() {
-        fetch("/feeds").then(x => x.json()).then(feeds => {
+        return api("/feeds").then(x => x.json()).then(feeds => {
             feeds.sort();
             const preferred = "playback/time";
             let hasPreffered = false;
@@ -125,7 +228,7 @@
                 endpoint = endpointSelector.value = preferred;
             }
             update();
-        })
+        });
     }
 
     function update() {
@@ -149,10 +252,9 @@
         updateLabels();
         setLabelValue("status", "sending");
         const requestStart = new Date();
-        fetch(url)
-            .then(response => {
-                const { headers, status } = response;
-                return response.text()
+        api(url).then(x => {
+                const { headers, status } = x;
+                return x.text()
                     .then(text => ({ headers, status, text }))
                     .catch(e => ({ headers, status, text: "error" }));
             })

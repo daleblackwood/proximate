@@ -12,8 +12,8 @@ public class ApiConsumer : IConsumer
         API_OAUTH_GRANT,
         API_CLIENT_ID,
         API_CLIENT_SECRET,
-        API_POLL_MINS,
-        API_KEY_INTERVAL
+        POLL_INTERVAL,
+        KEY_INTERVAL
     }
 
     public class ApiConfig : Config<ApiConfigKey> 

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 const net = require("net");
 
-const HOST = process.argv[2] || "0.0.0.0";
-const PORT = process.argv[3] ? parseInt(process.argv[3], 10) : 5999;
+const args = process.argv.slice(2);
+const HOST = "0.0.0.0";
+const PORT = parseInt(args.shift()) || 5999;
 
 const server = net.createServer((socket) => {
     console.log(`Client connected: ${socket.remoteAddress}:${socket.remotePort}`);

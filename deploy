@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 APP_DIR="Proximate"
 DEPLOY_DIR="./Proximate.Deploy"
@@ -31,7 +32,13 @@ function push_up() {
     pulumi up -s $STACK -C $DEPLOY_DIR
 }
 
+function pull_logs() {
+    echo "Pulling logs..."
+    scripts/pull-logs.sh
+}
+
 function pull_down() {
+    pull_logs
     env
     echo "Destroying -s $STACK -C $DEPLOY_DIR..."
     pulumi destroy -s "$STACK" -C "$DEPLOY_DIR"
@@ -39,9 +46,11 @@ function pull_down() {
 }
 
 function publish() {
+    pull_logs
     image_build
     if [ $? -ne 0 ]; then exit 1; fi
     push_up
+    upload_config
 }
 
 ACTIONS="image_build|image_run|image_shell|push_up|pull_down|publish"

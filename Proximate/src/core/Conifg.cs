@@ -7,28 +7,38 @@ public class Config
 
     public string? Id { get; set; }
 
-    public static TimeSpan ParseSpan(string? value, Func<double, TimeSpan> spanFunc, double? defaultCount = null)
+    public static TimeSpan ParseSpan(string? input, TimeSpan? defaultSpan = null)
     {
-        var units = ParseDouble(value, 0.0);
-        if (units > 0.0)
-            return spanFunc(units);
-        if (defaultCount == null)
-            throw new Exception("Could not parse span.");
-        return spanFunc((double)defaultCount);
+        if (string.IsNullOrWhiteSpace(input) == false)
+        {
+            if (Timing.TryParseTimeSpan(input, out var parsed))
+            {
+                return parsed;
+            }
+            else
+            {
+                throw new Exception("Could not parse span.");
+            }
+        }
+        if (defaultSpan == null)
+        {
+            throw new Exception("Span required.");
+        }
+        return (TimeSpan)defaultSpan;
     }
 
-    public static double ParseDouble(string? value, double? defaultValue = null)
+    public static double ParseDouble(string? input, double? defaultValue = null)
     {
-        if (string.IsNullOrEmpty(value) == false && double.TryParse(value, out double parsed))
+        if (string.IsNullOrEmpty(input) == false && double.TryParse(input, out double parsed))
             return parsed;
         if (defaultValue == null)
             throw new Exception("Could not parse double.");
         return (double)defaultValue;
     }
 
-    public static double ParseInt(string? value, int? defaultValue = null)
+    public static double ParseInt(string? input, int? defaultValue = null)
     {
-        if (string.IsNullOrEmpty(value) == false && int.TryParse(value, out int parsed))
+        if (string.IsNullOrEmpty(input) == false && int.TryParse(input, out int parsed))
             return parsed;
         if (defaultValue == null)
             throw new Exception("Could not parse int.");

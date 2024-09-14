@@ -5,7 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <DefineConstants>TESTING</DefineConstants>
     <EnvironmentVariables>
       <ASPNETCORE_ENVIRONMENT>Testing</ASPNETCORE_ENVIRONMENT>
     </EnvironmentVariables>

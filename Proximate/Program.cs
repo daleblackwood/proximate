@@ -33,11 +33,11 @@ internal class Program
                 return;
             }
 
-            var pollDuration = Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.API_POLL_MINS), TimeSpan.FromMinutes, 10);
+            var pollDuration = Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.POLL_INTERVAL), TimeSpan.FromMinutes(10));
             var pollDurationMs = (uint)pollDuration.TotalMilliseconds;
-            var keyframeInterval = Config.ParseInt(config.Get(ApiConsumer.ApiConfigKey.API_KEY_INTERVAL), 10);
+            var keyframeInterval = Config.ParseInt(config.Get(ApiConsumer.ApiConfigKey.KEY_INTERVAL), 10);
 
-            uint.TryParse(config.Get(ApiConsumer.ApiConfigKey.API_KEY_INTERVAL) ?? "10", out uint keyInterval);
+            uint.TryParse(config.Get(ApiConsumer.ApiConfigKey.KEY_INTERVAL) ?? "10", out uint keyInterval);
 
             var keyStr = $"every {pollDurationMs / 60000.0} mins, keying every {pollDurationMs * keyInterval / 60000.0} mins";
             

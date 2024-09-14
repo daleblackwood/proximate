@@ -29,7 +29,7 @@ public class SnapshotLoggerTest
         snapshotter.AddValue(date.AddHours(1), "1", false);
         snapshotter.AddValue(date.AddHours(2), "2", false);
 
-        var logger = new SnapshotLogService();
+        var logger = Services.Get<SnapshotLogService>();
         var entry = logger.Register("test", snapshotter);
 
         var outFile = logger.DumpSnapshot("test", entry, date, date.AddHours(1).AddTicks(1));

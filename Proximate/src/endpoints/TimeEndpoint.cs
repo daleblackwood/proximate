@@ -1,6 +1,7 @@
 
 namespace Proximate;
 
+[AccessOpen]
 public class TimeEndpoint : Endpoint
 {
     [Get("/time")]

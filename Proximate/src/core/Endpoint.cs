@@ -1,7 +1,11 @@
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using System.Collections.Specialized;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -12,7 +16,8 @@ public abstract class Endpoint : WebApiController
     public class EndpointContext
     {
         public readonly Uri Url;
-        public object? Body { get; set; }
+        public string? Body { get; set; }
+        public NameValueCollection RequestHeaders { get; set; } = new();
         
         private Dictionary<string, string> parameters = new();
         private Dictionary<string, string> headers = new();
@@ -61,6 +66,11 @@ public abstract class Endpoint : WebApiController
         {
             var str = GetParameter(key);
             return str == null ? fallbackValue : double.Parse(str);
+        }
+
+        public T? GetData<T>()
+        {
+            return Json.TryParse<T>(Body);
         }
 
         public bool GetParameterBool(string key, bool fallbackValue = false)
@@ -121,6 +131,12 @@ public abstract class Endpoint : WebApiController
             {
                 throw new HttpException(HttpStatusCode.NotFound);
             }
+            var accessRequired = AccessLevel.Open;
+            var accessArribute = endpointType.GetCustomAttribute<AccessAttribute>();
+            if (accessArribute != null)
+            {
+                accessRequired = accessArribute.level;
+            }
             var inst = Activator.CreateInstance(endpointType) as Endpoint;
             if (inst == null)
             {
@@ -128,19 +144,55 @@ public abstract class Endpoint : WebApiController
             }
             object? result = null;
             var context = new EndpointContext(url);
+            context.RequestHeaders = request.Request.Headers;
             if (request.Request.HasEntityBody)
             {
                 using var reader = new StreamReader(request.Request.InputStream, Encoding.UTF8);
                 context.Body = await reader.ReadToEndAsync();
             }
+
+            Func<EndpointContext, Task<object>>? methodFunc = null;
             switch (method)
             {
                 case HttpVerbs.Get:
-                    result = await inst.Get(context);
+                    methodFunc = inst.Get;
                     break;
 
-                default:
-                    throw new HttpException(HttpStatusCode.MethodNotAllowed);
+                case HttpVerbs.Post:
+                    methodFunc = inst.Post;
+                    break;
+            }
+
+            if (methodFunc != null)
+            {
+                var methodAccessAttribute = methodFunc.GetMethodInfo().GetCustomAttribute<AccessAttribute>();
+                if (methodAccessAttribute != null)
+                {
+                    if (methodAccessAttribute.level > accessRequired)
+                    {
+                        accessRequired = methodAccessAttribute.level;
+                    }
+                }
+                if (accessRequired > AccessLevel.Open)
+                {
+                    try {
+                        var token = AuthUtils.ExtractBearerToken(request.Request.Headers);
+                        var accessAllowed = await Services.Get<AuthService>().CanAccess(token, accessRequired);
+                        if (accessAllowed == false)
+                        {
+                            throw new Exception("Access denied.");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        throw new HttpException(HttpStatusCode.Unauthorized, e.Message);
+                    }
+                }
+                result = await methodFunc.Invoke(context);
+            }
+            else
+            {
+                throw new HttpException(HttpStatusCode.MethodNotAllowed);
             }
 
             context.WriteHeaders(request.Response.Headers);
@@ -201,7 +253,9 @@ public abstract class Endpoint : WebApiController
         return types.FirstOrDefault(x => GetRoute(x) == route);
     }
 
-    public virtual Task<object> Get(EndpointContext payload) => throw new HttpException(System.Net.HttpStatusCode.MethodNotAllowed);
+    public virtual Task<object> Get(EndpointContext payload) => throw new HttpException(HttpStatusCode.MethodNotAllowed);
+
+    public virtual Task<object> Post(EndpointContext payload) => throw new HttpException(HttpStatusCode.MethodNotAllowed);
 }
 
 public class GetAttribute : RouteAttribute

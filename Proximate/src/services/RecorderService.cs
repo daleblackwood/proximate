@@ -2,6 +2,7 @@ namespace Proximate;
 
 public class RecorderService : Service
 {
+
     public static string ToId(string filePathOrPrefix)
     {
         return Path.GetFileNameWithoutExtension(filePathOrPrefix).ToLower().Trim();

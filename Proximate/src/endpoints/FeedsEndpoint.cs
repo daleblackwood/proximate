@@ -3,6 +3,7 @@ using EmbedIO.WebApi;
 
 namespace Proximate;
 
+[AccessRequired]
 public class FeedsEndpoint : Endpoint
 {
 

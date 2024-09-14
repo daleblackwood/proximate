@@ -9,7 +9,10 @@ public class TcpConsumer : IConsumer
     public enum TcpConfigKey
     {
         TCP_PORT,
-        TCP_MODE
+        TCP_MODE,
+
+        POLL_MINS,
+        KEY_INTERVAL
     }
 
     public enum TcpMode

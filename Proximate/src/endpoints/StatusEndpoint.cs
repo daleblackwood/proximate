@@ -1,6 +1,8 @@
 
 namespace Proximate;
 
+
+[AccessRequired]
 public class StatusEndpoint : Endpoint
 {
     public enum HealthStatus
