@@ -115,8 +115,10 @@ public class ApiConsumer : IConsumer
     {
         try
         {
+            var appledUrl = url
+                .Replace("{ts}", ((int)(DateTime.UtcNow - DateTime.UnixEpoch).TotalMilliseconds).ToString());
             var time = Timing.Now;
-            Log.Info($"Fetching data from {url}...");
+            Log.Info($"Fetching data from {appledUrl}...");
             if (authorizer != null)
             {
                 await authorizer.Authorize(client);
@@ -125,9 +127,9 @@ public class ApiConsumer : IConsumer
                     throw new Exception("Failed to authorize.");
                 }
             }
-            var response = await client.GetAsync(url);
+            var response = await client.GetAsync(appledUrl);
             var duration = Timing.Since(time).TotalMilliseconds;
-            Log.Verbose($"Fetched from {url} in {duration}ms.");
+            Log.Verbose($"Fetched from {appledUrl} in {duration}ms.");
             var code = response.EnsureSuccessStatusCode()?.StatusCode;
             if (code != HttpStatusCode.OK)
             {

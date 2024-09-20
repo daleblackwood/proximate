@@ -87,9 +87,13 @@ public class SnapshotLogService : Service
     {
         var start = LocalDayStart(Timing.Now);
         var end = start.AddDays(1);
-        foreach (var pair in snapshotters)
+        var snapshotKeys = snapshotters.Keys.ToArray();
+        foreach (var key in snapshotKeys)
         {
-            DumpIncrementalSnapshot(pair.Key, pair.Value, start, end);
+            snapshotters.TryGetValue(key, out var snapshotter);
+            if (snapshotter == null)
+                continue;
+            DumpIncrementalSnapshot(key, snapshotter, start, end);
         }
         LastDump = Timing.Now;
     }

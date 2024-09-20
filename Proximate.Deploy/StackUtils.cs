@@ -1,5 +1,6 @@
 
 
+using System.Collections.Immutable;
 using System.Diagnostics;
 using Pulumi;
 using Pulumi.Aws.Ec2;
@@ -159,5 +160,28 @@ docker pull $ECR_URL:latest
 # Run the Docker container
 docker run {volumeStr} --network host -d $ECR_URL:latest
 ";
+    }
+
+    public static string GenerateBucketConfig(string bucketName) {
+        return @$"
+AWS_REGION={RequireEnvVar("AWS_REGION")}
+AWS_ACCESS_KEY_ID={RequireEnvVar("AWS_ACCESS_KEY_ID")}
+AWS_SECRET_ACCESS_KEY={RequireEnvVar("AWS_SECRET_ACCESS_KEY")}
+S3_BUCKET_NAME={bucketName} 
+";
+    }
+
+    public static void OutputMap<T>(Dictionary<string, Input<T>> map, Action<Dictionary<string, T>> callback) {
+        var keys = map.Keys.ToArray();
+        var values = ImmutableArray.Create(map.Values.ToArray());
+        Output.All<T>(values).Apply(outputs => {
+            var dict = new Dictionary<string, T>();
+            for (var i = 0; i < values.Length; i++) 
+            {
+                dict[keys[i]] = outputs[i];
+            }
+            callback(dict);
+            return dict;
+        });
     }
 }

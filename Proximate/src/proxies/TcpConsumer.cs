@@ -4,7 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-public class TcpConsumer : IConsumer
+public class TcpConsumer : IConsumer, IDisposable
 {
     public enum TcpConfigKey
     {
@@ -163,5 +163,10 @@ public class TcpConsumer : IConsumer
         var result = pending.ToArray();
         pending.Clear();
         return Task.FromResult(result);
+    }
+
+    public void Dispose()
+    {
+        StopServer();
     }
 }

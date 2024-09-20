@@ -2,11 +2,13 @@ namespace Proximate;
 
 public class DirMonitor : IDisposable
 {
-    private FileSystemWatcher watcher;
     private readonly string dirPath;
-    private readonly Dictionary<string, DateTime> modTimes;
     public event Action<string>? OnUpdate;
     public event Action<string>? OnRemove;
+    public bool IsRunning { get; private set; }
+
+    private Timer? timer;
+    private readonly Dictionary<string, DateTime> modTimes = new();
 
     public DirMonitor(string dirPath)
     {
@@ -14,84 +16,55 @@ public class DirMonitor : IDisposable
         {
             throw new ArgumentException("Directory does not exist.", nameof(dirPath));
         }
-
         this.dirPath = dirPath;
-        modTimes = new Dictionary<string, DateTime>();
-
-        watcher = new FileSystemWatcher(dirPath)
-        {
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
-            IncludeSubdirectories = true,
-            EnableRaisingEvents = true
-        };
-
-        watcher.Created += OnFileCreated;
-        watcher.Changed += OnFileChanged;
-        watcher.Deleted += OnFileDeleted;
-        watcher.Renamed += OnFileRenamed;
-    }
-
-    private void OnFileCreated(object sender, FileSystemEventArgs e) => HandleUpdate(e.FullPath);
-
-    private void OnFileChanged(object sender, FileSystemEventArgs e) => HandleUpdate(e.FullPath);
-
-    private void HandleUpdate(string filePath)
-    {
-        if (File.Exists(filePath))
-        {
-            DateTime lastWriteTime = File.GetLastWriteTime(filePath);
-            if (!modTimes.TryGetValue(filePath, out DateTime previousWriteTime) || lastWriteTime > previousWriteTime)
-            {
-                modTimes[filePath] = lastWriteTime;
-                OnUpdate?.Invoke(filePath);
-            }
-        }
-    }
-
-    private void OnFileDeleted(object sender, FileSystemEventArgs e)
-    {
-        if (modTimes.ContainsKey(e.FullPath))
-        {
-            modTimes.Remove(e.FullPath);
-        }
-
-        OnRemove?.Invoke(e.FullPath);
-    }
-
-    private void OnFileRenamed(object sender, RenamedEventArgs e)
-    {
-        if (modTimes.ContainsKey(e.OldFullPath))
-        {
-            modTimes.Remove(e.OldFullPath);            
-            OnRemove?.Invoke(e.FullPath);
-        }
-
-        if (File.Exists(e.FullPath))
-        {
-            modTimes[e.FullPath] = File.GetLastWriteTime(e.FullPath);
-            OnUpdate?.Invoke(e.FullPath);
-        }
+        Start();
     }
 
     public void Start()
     {
-        watcher.EnableRaisingEvents = true;
+        if (IsRunning) return;
         Console.WriteLine($"Monitoring directory: {dirPath}");
-        var files = Directory.GetFiles(dirPath);
-        foreach (var file in files)
-        {
-            HandleUpdate(file);
-        }
+        timer = new Timer(_ => Tick(), null, 0, 1000u);
+        IsRunning = true;
     }
 
     public void Stop()
     {
-        watcher.EnableRaisingEvents = false;
+        if (timer != null)
+        {
+            timer.Dispose();
+            timer = null;
+        }
         Console.WriteLine($"Stopped monitoring directory: {dirPath}");
+        IsRunning = false;
+    }
+
+    private void Tick()
+    {
+        if (!IsRunning) return;
+        var files = Directory.GetFiles(dirPath);
+        foreach (var file in files)
+        {
+            var lastMod = File.GetLastWriteTime(file);
+            if (modTimes.ContainsKey(file) == false || lastMod > modTimes[file])
+            {
+                OnUpdate?.Invoke(file);
+                modTimes[file] = lastMod;
+            }
+        }
+
+        foreach (var file in modTimes.Keys)
+        {
+            if (files.Contains(file) == false)
+            {
+                modTimes.Remove(file);
+                OnRemove?.Invoke(file);
+            }
+        }
     }
 
     public void Dispose()
     {
-        watcher.Dispose();
+        Stop();
     }
 }

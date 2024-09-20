@@ -33,19 +33,16 @@ internal class Program
                 return;
             }
 
-            var pollDuration = Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.POLL_INTERVAL), TimeSpan.FromMinutes(10));
-            var pollDurationMs = (uint)pollDuration.TotalMilliseconds;
-            var keyframeInterval = Config.ParseInt(config.Get(ApiConsumer.ApiConfigKey.KEY_INTERVAL), 10);
+            var pollInterval = Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.POLL_INTERVAL), TimeSpan.FromMinutes(1));
+            var keyInterval = Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.KEY_INTERVAL), TimeSpan.FromMinutes(30));
 
-            uint.TryParse(config.Get(ApiConsumer.ApiConfigKey.KEY_INTERVAL) ?? "10", out uint keyInterval);
-
-            var keyStr = $"every {pollDurationMs / 60000.0} mins, keying every {pollDurationMs * keyInterval / 60000.0} mins";
+            var keyStr = $"every {pollInterval.TotalMinutes.ToString("0.0")} mins, keying every {keyInterval.TotalMinutes.ToString("0.0")} mins";
             
             var recorder = recorderService.TryGet(id);
             if (recorder == null)
             {
                 Log.Info($"Now recording consumer: '{id}' {keyStr}...");
-                recorder = new ConsumerRecorder(proxy, pollDurationMs, pollDurationMs * keyInterval);
+                recorder = new ConsumerRecorder(proxy, pollInterval, keyInterval);
                 recorderService.Register(id, recorder);
                 recorder.Start();
                 logger.Register(id, recorder.Snapshotter);

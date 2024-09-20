@@ -1,7 +1,10 @@
 #!/bin/bash
+set -e
 source Proximate.Deploy/artefacts/output.sh
 
-INSTANCE_IP="$OUTPUT_INSTANCE_IP"
+INSTANCE_IP="${INSTANCE_IP:-$LATEST_INSTANCE_IP}"; 
+[[ -z "$INSTANCE_IP" ]] && { echo "Error: INSTANCE_IP is not set."; exit 1; }
+
 CERT_PATH="Proximate.Deploy/artefacts/cert"
 REMOTE_USER="ec2-user"
 REMOTE_DIR="/home/ec2-user/proximate/logs"

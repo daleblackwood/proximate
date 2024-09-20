@@ -27,11 +27,11 @@ public class ConsumerRecorder
     private uint snapshotIntervalMs;
     private uint tickIntervalMs;
 
-    public ConsumerRecorder(IConsumer consumer, uint tickIntervalMs = 1000, uint snapshotIntervalMs = 120000)
+    public ConsumerRecorder(IConsumer consumer, TimeSpan tickInterval, TimeSpan? snapsotInterval)
     {
         this.Consumer = consumer;
-        this.tickIntervalMs = tickIntervalMs;
-        this.snapshotIntervalMs = snapshotIntervalMs;
+        this.tickIntervalMs = (uint)tickInterval.TotalMilliseconds;
+        this.snapshotIntervalMs = (uint)(snapsotInterval ?? tickInterval.Multiply(10)).TotalMilliseconds;
     }
 
     public void SetConsumer(IConsumer consumer)

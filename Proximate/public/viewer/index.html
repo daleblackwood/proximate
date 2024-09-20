@@ -1,31 +1,69 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="dark">
 <head>
 
 <title>Proximate Debugger</title>
-<script src="/viewer/libs/simple-json-viewer.min.js"></script>
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+>
 
 <style>
 
-    body, html { padding: 0; margin: 0; background: #444; color: white; }
+    :root {
+        --success-fg: #88dd88;
+        --error-fg: #cc7777;
+        --pico-font-size: 13pt;
+    }
+
+    body, html { padding: 0; margin: 0; }
     * { box-sizing: border-box; }
 
     body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
         min-height: 100vh; 
         overflow: hidden;
-        font-size: 11pt;
     }
 
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
         font-weight: 700;
     }
 
-    main {
+    input, button {
+        font-size: inherit;
+    }
+
+    code {
+        width: 100%;
+        margin-bottom: 1em;
+        white-space: pre;
+        line-height: 1.3em;
+        position: relative;
+        border-bottom: 4px solid #FFFFFF22;
+
+        &.collapsed {
+            cursor: pointer;
+            transition: max-height 0.2s linear;
+            max-height: 100vh;
+        }
+
+        &.collapsed:not(:hover) {
+            max-height: 1.9em;
+            overflow: hidden;
+            border-bottom: 1px dashed #FFFFFF22;
+        }
+
+        &.collapsed::after {
+            content: "...";
+            position: absolute;
+            right: 0;
+            bottom: 0;
+        }
+    }    
+
+    body > main {
         width: calc(100vw - 2em);
-        height: calc(100vh - 2em);
-        background: #333;
+        min-height: calc(100vh - 2em);
         border: 1px solid rgba(0,0,0,0.1);
         box-shadow: 0 5px 60px rgba(0,0,0,0.2);;
         margin: 20px auto 0;
@@ -33,43 +71,44 @@
         gap: 1em;
         padding: 1em;
         margin: 0.5em;
-        --nav-width: 250px;
-    }
-
-    input, button {
-        font-size: inherit;
-    }
-
-    main .json {
-        display: block;
-        margin: 0;
-        width: calc(100% - var(--nav-width));
         height: 100%;
-        background: #222;
-        overflow: scroll;
-    }
+        --nav-width: 250px;
 
-    main nav {
-        width: var(--nav-width);
-    }
-
-        main nav div {
-            margin: 0 0 1em;
-        }
-
-        main nav label {
+        > main {
             display: block;
+            margin: 0;
+            width: calc(100% - var(--nav-width));
+            overflow: scroll;
         }
 
-            main nav label span {
-                font-family: monospace;
-                background-color: black;
-                color: greenyellow;
-                margin: 1em;
+        > menu {
+            all: unset;
+            width: var(--nav-width);
+            flex-direction: column;
+            justify-content: start;
+
+            > div {
+                margin: 0;
             }
 
-    main nav input, main nav select {
-        width: 100%;
+            label {
+                display: flex;
+                justify-content: space-between;
+
+                > span {
+                    font-family: monospace;
+                    color: var(--success-fg);
+                }
+
+                &.provisional > span {
+                    opacity: 0.5;
+                }
+            }
+
+            input, select {
+                width: 100%;
+            }
+        }
     }
 
     #printout {
@@ -79,24 +118,23 @@
     #blocker {
         position: fixed;
         inset: 0px;
-        background: rgba(0, 0, 0, 0.9);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         overflow: hidden;
         overflow-y: auto;
+        background: #00000088;
     }
 
     #blocker > main {
-        background-color: #444444;
-        color: #FFFFFF;
         width: fit-content;
+        min-width: 400px;
         height: fit-content;
         padding: 1.5rem 2rem 2rem;
         display: flex;
         flex-direction: column;
-        font-size: 13pt;
+        background: var(--pico-background-color);
     }
 
     #blocker > main > h3 {
@@ -110,21 +148,25 @@
 
 <body>
 <main>
-    <pre id="printout" class="json"></pre>
-    <nav>
+    <main id="printout">
+        <code id="head" class="collapsed"></code>
+        <code id="body"></code>
+    </main>
+    <menu>
         <div>
             <label for="endpoint">Endpoint <span></span></label>
             <select id="endpoint" onchange="setEndpoint(this.value)"></select>
         </div>
         <div id="delay-params">
             <label for="delay">Delay (Mins)<span></span></label>
-            <input id="delay" type="range" min="0" max="60" step="1" value="0" onchange="setDelay(this.value)" oninput="setProvisionalDelay(this.value)" />
+            <input id="delay" type="range" min="0" max="1" step="0.000001" value="0" onchange="handleDelay(this.value, true)" oninput="handleDelay(this.value, false)" />
         </div>
-    </nav>
+    </menu>
 </main>
 <script>
+    "use strict";
 
-    let delay = 0;
+    let delayMs = 0;
     let endpointSelector = document.querySelector("select[id=endpoint]");
     let endpoint = endpointSelector.value;
     let timer = 0;
@@ -132,16 +174,28 @@
     let isLoaded = false;
     let data;
     let jsv;
-    let printElem = document.getElementById("printout");
+    let printout = document.getElementById("printout");
     let results = {};
+    let nextUpdateTime = 0;
 
     const headerFields = ["head", "last", "first", "polled", "next", "log", "in-memory", "snapshots", "keys"];
+    const MS_SECOND = 1000;
+    const MS_MINUTE = MS_SECOND * 60;
+    const MS_HOUR = MS_MINUTE * 60;
+    const MS_DAY = MS_HOUR * 24;
+    const MS_WEEK = MS_DAY * 7;
+    const MS_YEARLIKE = MS_DAY * 365;
+
+    const DURATION_MIN = MS_SECOND;
+    const DURATION_MAX = MS_DAY * 2;
+    const POLL_INTERVAL = 5000;
 
     function init() {
         load().catch(showLogin);
     }
     
     function showLogin(e) {
+        if (e) console.error(e);
         setForm("Login", ["email:email", "password:password", "submit:submit"], data => {
             setBlocker();
             fetch("/auth", { headers: { 
@@ -152,55 +206,56 @@
             }).then(x => {
                 localStorage.setItem("lvt", x);
                 load().catch(showLogin);
-            }).catch(e => setError(e.toString(), "Login Error", showLogin));
+            }).catch(e => setError(e, "Login Error", showLogin));
         });
     }
 
     function setForm(title, fieldNames, onSubmit) {
-        const form = document.createElement("form");
-        const fields = fieldNames.map(x => {
-            const [name, type = "text"] = x.split(":");
-            const elem = document.createElement("input");
-            elem.setAttribute("name", name);
-            elem.setAttribute("type", type);
-            form.appendChild(elem);
-            return elem;
-        })
-        form.onsubmit = e => {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            const data = {};
-            for (const field of fields) {
-                data[field.name] = field.value;
+        const fields = fieldNames
+            .map(x => x.split(":"))
+            .map(([name, type = "text"]) => dom("input", {
+                name,
+                type
+            }));
+        const form = dom("form", {
+            onsubmit: e => {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                const data = {};
+                for (const field of fields) {
+                    data[field.name] = field.value;
+                }
+                onSubmit(data);
+                return false;
             }
-            onSubmit(data);
-            return false;
-        };
+        }, fields);
         setBlocker(form, title);
         return { form, fields };
     }
 
     function setError(error, title, onClick) {
-        const btn = document.createElement("button");
-        btn.innerText = "OK";
-        btn.onclick = e => {
-            e.preventDefault()
-            onClick && onClick();
-        };
-        setBlocker(btn, title || "Error", error)
+        const btn = dom("button", {
+            innerText: "OK",
+            onclick: e => {
+                e.preventDefault()
+                onClick && onClick();
+            }
+        });
+        setBlocker(btn, title || "Error", (error?.message ? error.message : error) || "Error")
     }
 
     function setBlocker(elem, title, description) {
-        document.getElementById("blocker")?.remove();
+        const id = "blocker";
+        document.getElementById(id)?.remove();
         if (!elem) return;
-        const blocker = document.createElement("div");
-        blocker.id = "blocker";
-        const main = blocker.appendChild(document.createElement("main"));
-        if (title) main.appendChild(document.createElement("h3")).innerText = title;
-        if (description) main.appendChild(document.createElement("p")).innerText = description;
-        main.appendChild(elem);
-        document.body.app
-        endChild(blocker);
+        const blocker = dom("div", { id }, [
+            dom("main", null, [
+                dom("h3", { innerText: title }),
+                dom("p", { innerText: description }),
+                elem
+            ])
+        ])
+        document.body.append(blocker);
     }
 
     function api(url, msg) {
@@ -217,9 +272,7 @@
             const preferred = "playback/time";
             let hasPreffered = false;
             for (const feed of feeds) {
-                var option = document.createElement("option");
-                option.innerText = feed;
-                endpointSelector.appendChild(option);
+                endpointSelector.appendChild(dom("option", { innerText: feed }));
                 if (feed == preferred) {
                     hasPreffered = true;
                 }
@@ -227,127 +280,135 @@
             if (hasPreffered) {
                 endpoint = endpointSelector.value = preferred;
             }
-            update();
+            handleDelay(0, true);
+            update(0);
         });
     }
 
-    function update() {
-        clearInterval(timer);
-        updateLabels();
-        timer = setInterval(nextTick, 500);
+    function update(setTicks) {
+        if (Number.isFinite(setTicks)) {
+            nextUpdateTime = 0;
+            clearInterval(timer);
+            timer = setInterval(update, 100);
+        }
+        if (nextUpdateTime < Date.now()) {
+            nextUpdateTime = Date.now() + POLL_INTERVAL;
+            nextTick();
+        } else {
+            updateLabels();
+            displayResults(results[endpoint]);
+        }
     }
 
     function updateLabels() {
-        setLabelValue("delay", formatTime(delay));
-        setLabelValue("endpoint", endpoint);
-        document.getElementById("delay-params").style.visibility = endpoint.startsWith("playback") ? "visible" : "hidden";
-        printElem.style.opacity = isLoaded ? "1.0" : "0.5";
+        setLabel("delay", formatSince(Date.now() + delayMs));
+        setLabel("endpoint", endpoint);
+        setLabel("poll-in", formatSince(nextUpdateTime), 0);
+        document.getElementById("delay-params").style.display = endpoint.startsWith("playback") ? "block" : "none";
+        printout.style.opacity = isLoaded ? "1.0" : "0.5";
     }
 
     function nextTick() {
         if (isUpdating) return;
+        if (!document.hasFocus()) return;
         isUpdating = true;
         isLoaded = false;
-        const url = `/${endpoint}?delay=${delay}`;
+        const url = `/${endpoint}?delay=${delayMs / 1000}`;
         updateLabels();
-        setLabelValue("status", "sending");
+        setLabel("status", "polling");
         const requestStart = new Date();
         api(url).then(x => {
-                const { headers, status } = x;
-                return x.text()
-                    .then(text => ({ headers, status, text }))
-                    .catch(e => ({ headers, status, text: "error" }));
-            })
-            .then(({ headers, status, text }) => {
-                const isError = text === "error";
-                isLoaded = true;
-                results[endpoint] = { headers, status, text, isLoaded, isError };
-                displayResults(results[endpoint]);
-            })
-            .catch(e => {
-                isLoaded = false;
-                console.error(e);
-                updateLabels();
-                setLabelValue("status", "error"); 
-            })
-            .finally(_ => isUpdating = false);
+            const { headers, status } = x;
+            return x.text()
+                .then(text => ({ headers, status, text }))
+                .catch(e => ({ headers, status, text: "error" }));
+        })
+        .then(({ headers, status, text }) => {
+            const isError = text === "error";
+            isLoaded = true;
+            results[endpoint] = { headers, status, text, isLoaded, isError };
+            displayResults(results[endpoint], true);
+            nextUpdateTime = DateTime.now() + POLL_INTERVAL;
+        })
+        .catch(e => {
+            isLoaded = false;
+            console.error(e);
+            updateLabels();
+            setLabel("status", "error"); 
+        })
+        .finally(_ => isUpdating = false);
     }
 
     function displayResults(result, nowLoaded) {
-        const container = document.querySelector(`main > .json`);
+        const elHead = document.querySelector("code#head");
+        const elBody = document.querySelector("code#body");
         if (result) {
             const { headers, status, text, isError } = result;
             if (typeof nowLoaded === "boolean") {
                 isLoaded = nowLoaded;
+                if (isLoaded) {
+                    setLabel("status", "idle"); 
+                }
             }
             let str = "";
             if (headers) {
-                str += "Headers:\n\t";
+                str += "Headers:\n";
                 for (const pair of headers.entries()) {
-                    str += pair[0] + '=' + pair[1] + ' ';
+                    str += "  " + pair[0] + "=" + pair[1] + "\n";
                 }
             }
-            str += '\nBody:\n';
+            elHead.innerText = str;
+            str = "";
             if (text && text?.match(/^\s*[\{\[]/)) {
                 str += JSON.stringify(JSON.parse(text), null, "  ");
             } else {
                 str += "(empty)";
             }
-            container.innerText = str;
+            elBody.innerText = str;
             const requestEnd = new Date();
             updateLabels();
-            setLabelValue("status", "idle");
             for (const field of headerFields) {
-                setLabelValue(field, headers.get(field))
+                setLabel(field, headers.get(field))
             }
         } else {
             updateLabels();
             for (const field of headerFields) {
-                setLabelValue(field, "");
+                setLabel(field, "");
             }
-            container.innerText = "";
+            elHead.innerText = "";
+            elBody.innerText = "";
         }
     }
 
-    function setLabelValue(label, value) {
-        const container = document.querySelector("main > nav");
+    function setLabel(label, value) {
+        value = String(value || "")
+        const container = document.querySelector("main > menu");
         let elem = container.querySelector(`label[for=${label}]`);
-        if (!elem) {
-            elem = document.createElement("label");
-            elem.setAttribute("for", label);
-            elem.innerText = label;
-
-            const div = document.createElement("div");
-            div.appendChild(elem);
-
-            container.appendChild(div);
+        if (!elem) {            
+            elem = dom("label", { for: label, innerText: label })
+            container.appendChild(dom("div", null, [elem]));
         }
-        let span = elem.querySelector("span");
-        if (!span) {
-            span = document.createElement("span");
-            elem.appendChild(span);
-        }
+        let span = elem.querySelector("span") || elem.appendChild(dom("span"));
         const dateMatch = value?.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d/);
         if (dateMatch) {
-            value = formatDateTime(value);
+            value = formatSince(value);
         }
         span.innerText = value;
+        return elem;
     }
 
-    function setDelay(value) {
-        delay = value * 60;
-        update();
-    }
-    
-    function setProvisionalDelay(value) {
-        setLabelValue("delay", formatTime(value * 60));
+    function handleDelay(value, doUpdate = false) {
+        delayMs = value * value * value * (DURATION_MAX - DURATION_MIN) + DURATION_MIN;
+        const lbl = setLabel("delay", formatSince(Date.now() + delayMs));
+        cls(lbl, "provisional", !doUpdate);
+        if (doUpdate) update(0);
     }
 
     function setEndpoint(value) {
         if (endpoint !== value) {
             endpoint = value;
             displayResults(results[endpoint], false);
-            update();
+            update(0);
         }
     }
 
@@ -355,28 +416,49 @@
         return data;
     }
 
-    function formatTime(seconds) {
-        const secs = Math.floor(seconds % 60);
-        const mins = Math.floor(seconds / 60);
-        return `${mins}:${String(secs).padStart(2, "0")}`;
+    function formatDuration(seconds) {
+        seconds = Math.floor(seconds);
+        return formatTime(seconds / 3600, seconds / 60 % 60, seconds % 3600);
+    }
+        
+    function formatTime(hours, minutes, seconds) {
+        return [hours, minutes, seconds]
+            .filter(Boolean)
+            .map((x, i) => i === 0 ? x : String(x).padStart(2, "0"))
+            .join(":");
     }
 
-    function formatDateTime(date) {
-        if (typeof date === "string") {
-            date = new Date(date);
-        }
-        if (!date || Number.isNaN(date.getTime())) {
-            return "-";
-        }
-        return `${
-                date.getHours()
-            }:${
-                date.getMinutes().toString().padStart(2, "0")
-            }:${
-                date.getSeconds().toString().padStart(2, "0")
-            } ${
-                date.getDate()}/${date.getMonth() + 1
-            }`;
+    function formatDateTime(d) {
+        if (typeof d === "string") d = new Date(d);
+        if (!d || Number.isNaN(d.getTime())) return "-";
+        return `${formatTime(d.getHours(), d.getMinutes(), d.getSeconds())} ${d.getDate()}/${d.getMonth() + 1}`;
+    }
+
+    function formatSince(d, decimals = 1) {
+        let dt = (typeof d === "string" ? d = new Date(d) : d).valueOf() - Date.now();
+        const p = dt >= 0 ? "+" : "-";
+        dt = Math.abs(dt);
+        if (dt > MS_YEARLIKE * 0.5) return p + (dt / MS_YEARLIKE).toFixed(decimals) + " years";
+        if (dt > MS_WEEK * 2) return p + (dt / MS_WEEK).toFixed(decimals) + " weeks";
+        if (dt > MS_DAY * 2) return p + (dt / MS_DAY).toFixed(decimals) + " days";
+        if (dt > MS_HOUR * 2) return p + (dt / MS_HOUR).toFixed(decimals) + " hrs";
+        if (dt > MS_MINUTE * 2) return p + (dt / MS_MINUTE).toFixed(decimals) + " min";
+        return p + (dt / MS_SECOND).toFixed(decimals) + " sec";
+    }
+
+    function dom(tagOrElement, attrs, children) {
+        const el = tagOrElement instanceof HTMLElement ? tagOrElement : document.createElement(tagOrElement);
+        attrs && Object.keys(attrs).forEach(key => 
+            key === "style" ? Object.assign(el.style, attrs.style) :
+            key in el ? el[key] = attrs[key] :
+            el.setAttribute(key, attrs[key]));
+        ((children instanceof Array ? children : children) || [])?.forEach(x => x && el.appendChild(x));
+        return el;
+    }
+
+    function cls(elem, className, on) {
+        elem.classList.remove(className);
+        if (on) elem.classList.add(className);
     }
 
     init();

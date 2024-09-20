@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Pulumi;
+using Pulumi.Aws.S3;
 using Pulumi.Aws.Ec2;
 using Pulumi.Aws.Ec2.Inputs;
 using Pulumi.Aws.ImageBuilder;
@@ -21,6 +22,10 @@ class ProximateStack : Stack
             Description = "Proximate Security Group",
             Ingress = StackUtils.GetIngress(22, 64000, ["tcp", "udp"]),
             Egress = StackUtils.GetEgress()
+        });
+
+        var bucket = new Bucket(Prefix + "-bucket", new () {
+            Tags = StackUtils.GetTags(Prefix + "-bucket")
         });
 
         var ami = GetAmi.InvokeAsync(new() {
@@ -60,12 +65,26 @@ class ProximateStack : Stack
             UserDataReplaceOnChange = true
         });
 
-        PublicIp = instance.PublicIp;
+        var elasticIp = new Eip(Prefix + "-ip", EipArgs.Empty);
+        var eipAssociation = new EipAssociation(Prefix + "-ip-map", new () {
+            InstanceId = instance.Id,
+            AllocationId = elasticIp.Id
+        });
 
-        Output.All([instance.PublicIp, image.ImageUri]).Apply(outputs => {
-            var str = $"OUTPUT_INSTANCE_IP=\"{outputs[0]}\"\nOUTPUT_IMAGE_URI=\"{outputs[1]}\"";
+        PublicIp = elasticIp.PublicIp;
+
+        StackUtils.OutputMap<string>(new () {
+            { "LATEST_INSTANCE_IP", elasticIp.PublicIp },
+            { "LATEST_IMAGE_URI", image.ImageUri },
+            { "LATEST_BUCKET_NAME", bucket.BucketName }
+        }, outputs => {
+            var str = "";
+            foreach (var pair in outputs) {
+                if (string.IsNullOrWhiteSpace(pair.Value)) continue;
+                str += $"export {pair.Key}=\"{pair.Value}\"\n";
+            }
             File.WriteAllText(StackUtils.ProjectPath("artefacts/output.sh"), str);
-            return str;
+            File.WriteAllText(StackUtils.ProjectPath("artefacts/s3.config"), StackUtils.GenerateBucketConfig(outputs["LATEST_BUCKET_NAME"]));
         });
     }
 

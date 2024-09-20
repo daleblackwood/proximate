@@ -4,12 +4,14 @@ set -e
 APP_DIR="Proximate"
 DEPLOY_DIR="./Proximate.Deploy"
 IMAGE_NAME="proximate"
-ENV_FILE="$DEPLOY_DIR/sample.env"
 STACK="dev"
+ENV_FILE="$DEPLOY_DIR/artefacts/$STACK.env"
 APP_PATH="/app/proximate/"
 
 function env() {
-    source $ENV_FILE
+    export $(cat Proximate.Deploy/artefacts/dev.env | xargs)
+    aws sts get-caller-identity --query "Arn" --output text
+    if [ $? -ne 0 ]; then echo "Unable to auth AWS"; exit 1; fi
 }
 
 function image_build() {
@@ -30,6 +32,8 @@ function push_up() {
     env
     echo "Pushing -s $STACK -C $DEPLOY_DIR..."
     pulumi up -s $STACK -C $DEPLOY_DIR
+    source "$DEPLOY_DIR/artefacts/output.sh"
+    ssh-keyscan -H $LATEST_INSTANCE_IP >> ~/.ssh/known_hosts
 }
 
 function pull_logs() {
@@ -45,20 +49,46 @@ function pull_down() {
     pulumi destroy -s "$STACK" -C "$DEPLOY_DIR"
 }
 
+function push_config() {
+    echo "Pushing configs..."
+    scripts/push-config.sh
+}
+
+function replace() {
+    pull_logs
+    image_build
+}
+
 function publish() {
     pull_logs
     image_build
     if [ $? -ne 0 ]; then exit 1; fi
     push_up
-    upload_config
+    push_config
 }
 
-ACTIONS="image_build|image_run|image_shell|push_up|pull_down|publish"
-ACTION=$1; shift
+ACTIONS="image_build image_run image_shell push_up pull_down publish"
+SKIP_LOGS=0
+
+help_message() {
+    echo "Usage: $0 ACTION [options] [additional arguments]"
+    echo -e "\nAvailable actions:\n  $ACTIONS"
+    echo -e "\nOptions:\n  --skip-logs   Skip logs\n  --help        Display help"
+    exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --skip-logs) SKIP_LOGS=1; shift ;;
+        --help) help_message ;;
+        *) ACTION=$1; shift ;;
+    esac
+done
+
+if [[ -z "$ACTION" ]]; then help_message; exit 1; fi
+
 if declare -f "$ACTION" > /dev/null; then
-    # Call the function dynamically with remaining arguments
     "$ACTION" "$@"
 else
-    echo "Usage: $0 {$ACTIONS} [additional arguments]"
-    exit 1
+    echo "Error: Invalid ACTION '$ACTION'." && help_message && exit 1
 fi
