@@ -49,7 +49,7 @@ public class SnapshotLogService : Service
             OnTimer, 
             null, 
             (int)(Timing.Now.AddSeconds(10).RoundUp(TimeSpan.FromSeconds(10)) - Timing.Now).TotalMilliseconds, 
-            (int)TimeSpan.FromMinutes(1).TotalMilliseconds
+            (int)TimeSpan.FromMinutes(30).TotalMilliseconds
         );
         var pathAccess = GetFilePath("test", now);
         var dirName = Path.GetDirectoryName(pathAccess);
@@ -109,6 +109,7 @@ public class SnapshotLogService : Service
 
     public string? DumpSnapshot(string key, SnapshotLogState entry, DateTime start, DateTime end, bool append = false)
     {
+        var startTime = DateTime.UtcNow;
         if (entry.isWriting)
         {
             throw new FileLoadException("Snapshot is already dumping.");
@@ -155,8 +156,16 @@ public class SnapshotLogService : Service
                     }
                 }
             }
-            Log.Info($"Logged {storedCount} for {key}");
-            
+            var logSeconds = (DateTime.UtcNow - startTime).Seconds;
+            if (logSeconds < 10.0) 
+            {
+                Log.Info($"Log {storedCount} for {key} in {logSeconds.ToString("0.0")}");
+            }
+            else
+            {
+                Log.Warn($"LONG LOG {storedCount} for {key} in {logSeconds.ToString("0.0")}");
+            }
+                
             var clearTime = start.AddDays(-2);
             snapshotter.ClearValuesBefore(clearTime);
 

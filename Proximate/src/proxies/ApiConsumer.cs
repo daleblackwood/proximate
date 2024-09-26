@@ -1,4 +1,3 @@
-using System.Dynamic;
 using System.Net;
 
 namespace Proximate;
@@ -12,6 +11,8 @@ public class ApiConsumer : IConsumer
         API_OAUTH_GRANT,
         API_CLIENT_ID,
         API_CLIENT_SECRET,
+        API_REQUEST_BODY,
+        API_QUERY,
         POLL_INTERVAL,
         KEY_INTERVAL
     }
@@ -38,6 +39,19 @@ public class ApiConsumer : IConsumer
 
     public class ApiConsumerBuilder : IConsumerBuilder
     {
+
+        public class GraphQuery 
+        {
+            public required string query { get; set; }
+        }
+        public static string ParseQueryBody(string query)
+        {
+            var body = Json.Serialize(new GraphQuery {
+                query = query
+            }, false);
+            return body;
+        }
+
         public bool CanBuild(Config config)
         {
             return config.Has(ApiConfigKey.API_URL);
@@ -63,11 +77,23 @@ public class ApiConsumer : IConsumer
                     grantType: config.Get(ApiConfigKey.API_OAUTH_GRANT)
                 ));        
             }
+
+            var query = config.Get(ApiConfigKey.API_QUERY);
+            if (string.IsNullOrEmpty(query) == false)
+            {
+                consumer.RequestBody = ParseQueryBody(query);
+            }
+            else
+            {
+                consumer.RequestBody = config.Get(ApiConfigKey.API_REQUEST_BODY);
+            }
             return consumer;
         }
     }
 
     public string Id { get; private set; }
+
+    public string? RequestBody { get; set; }
 
     public DateTime LastUpdateTime { get; private set; } = Timing.Epoch;
     public DateTime NextUpdateTime => LastUpdateTime.AddMilliseconds(minPollIntervalMs);
@@ -127,7 +153,16 @@ public class ApiConsumer : IConsumer
                     throw new Exception("Failed to authorize.");
                 }
             }
-            var response = await client.GetAsync(appledUrl);
+            HttpResponseMessage response;
+            if (string.IsNullOrWhiteSpace(RequestBody) == false)
+            {
+                var requestContent = new StringContent(RequestBody);
+                response = await client.PostAsync(appledUrl, requestContent);
+            }
+            else
+            {                
+                response = await client.GetAsync(appledUrl);
+            }
             var duration = Timing.Since(time).TotalMilliseconds;
             Log.Verbose($"Fetched from {appledUrl} in {duration}ms.");
             var code = response.EnsureSuccessStatusCode()?.StatusCode;

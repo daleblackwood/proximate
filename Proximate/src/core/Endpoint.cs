@@ -2,10 +2,8 @@ using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using System.Collections.Specialized;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -214,7 +212,14 @@ public abstract class Endpoint : WebApiController
             }
             request.Response.StatusCode = code;
             var errorDesc = $"{code} ({Enum.GetName(typeof(HttpStatusCode), code) ?? "Unknown"}): {e.Message}";
-            Log.Error($"{errorDesc}:\n{e.StackTrace ?? ""}");
+            if (code != 400)
+            {
+                Log.Info("Request error: " + errorDesc);
+            }
+            else 
+            {
+                Log.Error($"{errorDesc}:\n{e.StackTrace ?? ""}");
+            }
             using (var writer = request.OpenResponseText())
             {
                 await writer.WriteAsync(errorDesc);

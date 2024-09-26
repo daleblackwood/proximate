@@ -4,7 +4,7 @@ set -e
 APP_DIR="Proximate"
 DEPLOY_DIR="./Proximate.Deploy"
 IMAGE_NAME="proximate"
-STACK="dev"
+STACK="dev2"
 ENV_FILE="$DEPLOY_DIR/artefacts/$STACK.env"
 APP_PATH="/app/proximate/"
 
@@ -21,7 +21,7 @@ function image_build() {
 
 function image_run() {
     image_build
-    docker run -p 80:80 -v proximate-logs:/logs --rm $IMAGE_NAME "$@"
+    docker run -p 80:80 -v proximate-logs:/logs --rm --memory="1g" --cpus="2" --name="proximate"$IMAGE_NAME "$@" 
 }
 
 function image_shell() {
@@ -32,13 +32,15 @@ function push_up() {
     env
     echo "Pushing -s $STACK -C $DEPLOY_DIR..."
     pulumi up -s $STACK -C $DEPLOY_DIR
-    source "$DEPLOY_DIR/artefacts/output.sh"
-    ssh-keyscan -H $LATEST_INSTANCE_IP >> ~/.ssh/known_hosts
+    source "$DEPLOY_DIR/artefacts/$STACK.deployment.sh"
+    ssh-keyscan -H $DEPLOYMENT_INSTANCE_IP >> ~/.ssh/known_hosts
 }
 
 function pull_logs() {
-    echo "Pulling logs..."
-    scripts/pull-logs.sh
+    if [ -f "$DEPLOY_DIR/artefacts/$STACK.deployment.sh" ]; then
+        echo "Pulling logs..."
+        scripts/pull-logs.sh $STACK
+    fi
 }
 
 function pull_down() {
@@ -51,7 +53,7 @@ function pull_down() {
 
 function push_config() {
     echo "Pushing configs..."
-    scripts/push-config.sh
+    scripts/push-config.sh $STACK
 }
 
 function replace() {

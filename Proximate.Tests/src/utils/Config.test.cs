@@ -7,16 +7,17 @@ public class ConfigTest
     [Fact]
     public void LoadConfig()
     {
-        var config = new ApiConsumer.ApiConfig().LoadFile(Env.ProjectPath("data/openf1.config"));
+        var config = new ApiConsumer.ApiConfig().LoadFile(Env.ProjectPath("data/openf1.toml"));
         Assert.True(config != null);
         Assert.True(config.Get(ApiConsumer.ApiConfigKey.API_URL) != null);
         Assert.True(config.Get(ApiConsumer.ApiConfigKey.API_OAUTH_URL) != null);
-        Assert.Equal("FAKE_USERNAME", config.Get(ApiConsumer.ApiConfigKey.API_CLIENT_ID));
-        Assert.Equal("FAKE_PASSWORD", config.Get(ApiConsumer.ApiConfigKey.API_CLIENT_SECRET));
+        Assert.Equal("fake-username", config.Get(ApiConsumer.ApiConfigKey.API_CLIENT_ID));
+        Assert.Equal("fake-password", config.Get(ApiConsumer.ApiConfigKey.API_CLIENT_SECRET));
+        Assert.Equal("password", config.Get(ApiConsumer.ApiConfigKey.API_OAUTH_GRANT));
         Assert.Equal(TimeSpan.FromMinutes(10), Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.POLL_INTERVAL)));
         Assert.Equal(120, Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.KEY_INTERVAL)).TotalMinutes);
 
-        config = new ApiConsumer.ApiConfig().LoadFile(Env.ProjectPath("data/time.config"));
+        config = new ApiConsumer.ApiConfig().LoadFile(Env.ProjectPath("data/time.toml"));
         Assert.Equal(TimeSpan.FromMinutes(1), Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.POLL_INTERVAL)));
         Assert.Equal(30, Config.ParseSpan(config.Get(ApiConsumer.ApiConfigKey.KEY_INTERVAL), TimeSpan.FromMinutes(30)).TotalMinutes);
     }

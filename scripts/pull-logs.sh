@@ -1,11 +1,15 @@
 #!/bin/bash
+echo "[PULL LOGS]"
 set -e
-source Proximate.Deploy/artefacts/output.sh
 
-INSTANCE_IP="${INSTANCE_IP:-$LATEST_INSTANCE_IP}"; 
-[[ -z "$INSTANCE_IP" ]] && { echo "Error: INSTANCE_IP is not set."; exit 1; }
+[[ -z $1 ]] || source "Proximate.Deploy/artefacts/$1.deployment.sh"
+
+INSTANCE_IP="${INSTANCE_IP:-$DEPLOYMENT_INSTANCE_IP}"; 
+[[ -z "$INSTANCE_IP" ]] && { echo "Error: INSTANCE_IP is not set or deployment not found."; exit 1; }
 
 CERT_PATH="Proximate.Deploy/artefacts/cert"
+[[ -f "$CERT_PATH" ]] || { echo "Error: certificate is not present."; exit 1; }
+
 REMOTE_USER="ec2-user"
 REMOTE_DIR="/home/ec2-user/proximate/logs"
 SANITIZED_HOSTNAME=$(echo "$INSTANCE_IP" | tr '.' '.')
@@ -28,7 +32,7 @@ fi
 
 TARBALL_NAME="ps_$(date +$TS_FORMAT)_${SANITIZED_HOSTNAME}.tar.gz"
 
-echo "Compressing logs on remote server..."
+echo "Compressing logs on $INSTANCE_IP..."
 ssh -i "$CERT_PATH" "$REMOTE_USER@$INSTANCE_IP" "tar -czf /tmp/$TARBALL_NAME -C $(dirname "$REMOTE_DIR") $(basename "$REMOTE_DIR")"
 
 echo "Downloading logs..."

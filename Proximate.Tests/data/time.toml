@@ -1,0 +1,2 @@
+api_url = "https://www.timeapi.io/api/time/current/zone?timeZone=Australia%2FSydney"
+poll_interval = "1:00"

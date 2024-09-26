@@ -1,0 +1,11 @@
+api_url = 'https://beta.pokeapi.co/graphql/v1beta'
+api_query = '''
+query GetPokemonList {
+  pokemon_v2_pokemon(limit: 10) {
+    id
+    name
+  }
+}
+'''
+poll_interval = "1:00:00"
+key_interval = "24:00:00"

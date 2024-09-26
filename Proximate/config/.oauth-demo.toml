@@ -1,0 +1,6 @@
+api_url = "https://demo.duendesoftware.com/api/test"
+api_oauth_url = "https://demo.duendesoftware.com/connect/token"
+api_client_id = "m2m"
+api_client_secret = "secret"
+poll_interval = "10:00"
+key_interval = "2:00:00"

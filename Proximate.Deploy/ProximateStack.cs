@@ -50,7 +50,7 @@ class ProximateStack : Stack
         var instance = new Instance(Prefix + "-inst", new() {
             Tags = StackUtils.GetTags(Prefix + "-inst"),
             VolumeTags = StackUtils.GetTags(Prefix + "-volume"),
-            InstanceType = "t4g.nano",
+            InstanceType = "t4g.micro",
             Ami = amiId,
             VpcSecurityGroupIds = new[] { securityGroup.Id },
             KeyName = keyPair.KeyName,
@@ -74,17 +74,20 @@ class ProximateStack : Stack
         PublicIp = elasticIp.PublicIp;
 
         StackUtils.OutputMap<string>(new () {
-            { "LATEST_INSTANCE_IP", elasticIp.PublicIp },
-            { "LATEST_IMAGE_URI", image.ImageUri },
-            { "LATEST_BUCKET_NAME", bucket.BucketName }
+            { "DEPLOYMENT_STACK", Output.Format($"{Deployment.Instance.StackName}") },
+            { "DEPLOYMENT_PROJECT", Output.Format($"{Deployment.Instance.ProjectName}") },
+            { "DEPLOYMENT_INSTANCE_IP", elasticIp.PublicIp },
+            { "DEPLOYMENT_IMAGE_REPO", ecr.Url },
+            { "DEPLOYMENT_IMAGE_URI", image.ImageUri },
+            { "DEPLOYMENT_BUCKET_NAME", bucket.BucketName }
         }, outputs => {
             var str = "";
             foreach (var pair in outputs) {
                 if (string.IsNullOrWhiteSpace(pair.Value)) continue;
                 str += $"export {pair.Key}=\"{pair.Value}\"\n";
             }
-            File.WriteAllText(StackUtils.ProjectPath("artefacts/output.sh"), str);
-            File.WriteAllText(StackUtils.ProjectPath("artefacts/s3.config"), StackUtils.GenerateBucketConfig(outputs["LATEST_BUCKET_NAME"]));
+            File.WriteAllText(StackUtils.ProjectPath($"artefacts/{Deployment.Instance.StackName}.deployment.sh"), str);
+            File.WriteAllText(StackUtils.ProjectPath("artefacts/s3.config"), StackUtils.GenerateBucketConfig(outputs["DEPLOYMENT_BUCKET_NAME"]));
         });
     }
 

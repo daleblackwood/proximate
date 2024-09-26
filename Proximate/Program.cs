@@ -14,7 +14,7 @@ internal class Program
         var logger = Services.Get<SnapshotLogService>();
 
         var configDir = Env.ProjectPath("config");
-        var monitor = new DirMonitor(configDir);
+        var monitor = new DirMonitor(configDir, ".toml");
 
         monitor.OnUpdate += file => {
             var id = RecorderService.ToId(file);

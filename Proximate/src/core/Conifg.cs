@@ -1,3 +1,5 @@
+using Tommy;
+
 namespace Proximate;
 
 
@@ -109,11 +111,26 @@ public class Config
     public Config LoadFile(string path)
     {
         var text = File.ReadAllText(Env.ProjectPath(path));
-        Set(ParseConfig(text));
+        Set(ParseTomlConfig(text));
         return this;
     }
+
+    public static Dictionary<string, string> ParseTomlConfig(string toml)
+    {
+        var result = new Dictionary<string, string>();
+        using (var reader = new StringReader(toml))
+        {
+            var table = TOML.Parse(reader);
+            foreach (var key in table.Keys)
+            {
+                var dictKey = key.ToUpper().Trim();
+                result[dictKey] = table[key];
+            }
+        }
+        return result;
+    }
     
-    public static Dictionary<string, string> ParseConfig(string text)
+    public static Dictionary<string, string> ParseIniConfig(string text)
     {
         var result = new Dictionary<string, string>();
         var lines = text.Split('\n');

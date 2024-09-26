@@ -16,6 +16,15 @@ public static class Log
         }
     }
 
+     public static void Warn(string? s)
+    {
+        Console.WriteLine("WARNING: " + s);
+        if (SentrySdk.IsEnabled)
+        {
+            SentrySdk.CaptureMessage(s ?? "Unknown Warning", SentryLevel.Warning);
+        }
+    }
+
     public static void Error(string? s)
     {
         Console.WriteLine("ERROR: " + s);

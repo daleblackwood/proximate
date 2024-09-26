@@ -14,10 +14,6 @@ public class FeedsEndpoint : Endpoint
         foreach (var service in services) 
         {
             list.Add("playback/" + service.Id);
-            if (service.Consumer is ApiConsumer)
-            {
-                list.Add("live/" + service.Id);
-            }
         }
         await Task.Delay(1);
         return list.ToArray();

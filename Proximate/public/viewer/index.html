@@ -251,7 +251,7 @@
         const blocker = dom("div", { id }, [
             dom("main", null, [
                 dom("h3", { innerText: title }),
-                dom("p", { innerText: description }),
+                dom("p", { innerText: description || "" }),
                 elem
             ])
         ])
@@ -279,9 +279,10 @@
             }
             if (hasPreffered) {
                 endpoint = endpointSelector.value = preferred;
+            } else if (!endpoint) {
+                endpoint = feeds[0];
             }
             handleDelay(0, true);
-            update(0);
         });
     }
 
@@ -328,7 +329,7 @@
             isLoaded = true;
             results[endpoint] = { headers, status, text, isLoaded, isError };
             displayResults(results[endpoint], true);
-            nextUpdateTime = DateTime.now() + POLL_INTERVAL;
+            nextUpdateTime = Date.now() + POLL_INTERVAL;
         })
         .catch(e => {
             isLoaded = false;
@@ -346,7 +347,7 @@
             const { headers, status, text, isError } = result;
             if (typeof nowLoaded === "boolean") {
                 isLoaded = nowLoaded;
-                if (isLoaded) {
+                 if (isLoaded) {
                     setLabel("status", "idle"); 
                 }
             }
