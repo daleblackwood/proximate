@@ -188,7 +188,7 @@
 
     const DURATION_MIN = MS_SECOND;
     const DURATION_MAX = MS_DAY * 2;
-    const POLL_INTERVAL = 5000;
+    const POLL_INTERVAL = 15000;
 
     function init() {
         load().catch(showLogin);
@@ -269,7 +269,7 @@
     function load() {
         return api("/feeds").then(x => x.json()).then(feeds => {
             feeds.sort();
-            const preferred = "playback/time";
+            const preferred = location.hash?.substring(1) || "playback/time";
             let hasPreffered = false;
             for (const feed of feeds) {
                 endpointSelector.appendChild(dom("option", { innerText: feed }));
@@ -282,6 +282,7 @@
             } else if (!endpoint) {
                 endpoint = feeds[0];
             }
+            setEndpoint(endpoint);
             handleDelay(0, true);
         });
     }
@@ -297,7 +298,7 @@
             nextTick();
         } else {
             updateLabels();
-            displayResults(results[endpoint]);
+            displayResults(endpoint);
         }
     }
 
@@ -327,8 +328,8 @@
         .then(({ headers, status, text }) => {
             const isError = text === "error";
             isLoaded = true;
-            results[endpoint] = { headers, status, text, isLoaded, isError };
-            displayResults(results[endpoint], true);
+            results[endpoint] = { headers, status, text, isLoaded, isError, date: Date.now() };
+            displayResults(endpoint, true);
             nextUpdateTime = Date.now() + POLL_INTERVAL;
         })
         .catch(e => {
@@ -340,11 +341,17 @@
         .finally(_ => isUpdating = false);
     }
 
-    function displayResults(result, nowLoaded) {
+    let lastDisplay = { endpoint: "", date: 0 };
+
+    function displayResults(endpoint, nowLoaded) {
         const elHead = document.querySelector("code#head");
         const elBody = document.querySelector("code#body");
+        const result = results[endpoint];
         if (result) {
-            const { headers, status, text, isError } = result;
+            const { headers, status, text, isError, date } = result;
+            if (endpoint === lastDisplay.endpoint && date === lastDisplay.date)
+                return;
+            lastDisplay = { endpoint, date };
             if (typeof nowLoaded === "boolean") {
                 isLoaded = nowLoaded;
                  if (isLoaded) {
@@ -410,6 +417,7 @@
             endpoint = value;
             displayResults(results[endpoint], false);
             update(0);
+            location.hash = endpoint
         }
     }
 

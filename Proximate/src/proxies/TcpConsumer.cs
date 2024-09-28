@@ -118,36 +118,52 @@ public class TcpConsumer : IConsumer, IDisposable
 
     private async Task HandleClient(TcpClient client, CancellationToken token)
     {
-        using (client)
+        try
         {
             var stream = client.GetStream();
             var buffer = new byte[1024];
+            var memoryStream = new MemoryStream();
 
             while (!token.IsCancellationRequested)
             {
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token);
-                if (bytesRead == 0) break;
-
-                string messageContent;
-                if (Mode == TcpMode.BINARY)
+                try
                 {
-                    messageContent = Convert.ToBase64String(buffer, 0, bytesRead);
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, token);
+                    if (bytesRead == 0)
+                    {
+                        await Task.Delay(10, token);
+                        continue;
+                    }
+
+                    memoryStream.Write(buffer, 0, bytesRead);
+                    if (!stream.DataAvailable)
+                    {
+                        var messageBytes = memoryStream.ToArray();
+                        memoryStream.SetLength(0);
+
+                        string messageContent = Mode == TcpMode.BINARY 
+                            ? Convert.ToBase64String(messageBytes) 
+                            : Encoding.UTF8.GetString(messageBytes);
+
+                        var result = new ConsumerMessage
+                        {
+                            time = Timing.Now,
+                            content = messageContent
+                        };
+
+                        pending.Add(result);
+                        LastUpdateTime = result.time;
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    messageContent = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    Console.WriteLine($"Error reading from stream: {ex.Message}");
                 }
-
-                var result = new ConsumerMessage
-                {
-                    time = Timing.Now,
-                    content = messageContent
-                };
-
-                LastUpdateTime = result.time;
-
-                pending.Add(result);
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error: {ex.Message}");
         }
     }
 

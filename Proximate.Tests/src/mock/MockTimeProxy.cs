@@ -10,7 +10,15 @@ public class MockTimeProxy : IConsumer
 
     public class Response
     {
-        public DateTime time { get; set; }
+        public required DateTime time { get; set; }
+        public required int year { get; set; }
+        public required int month { get; set; }
+        public required int day { get; set; }
+        public required int hour { get; set; }
+        public required int minute { get; set; }
+        public required int second { get; set; }
+
+        public required string formatted { get; set; }
     }
 
     public DateTime LastUpdateTime { get; private set; } = Timing.Epoch;
@@ -27,9 +35,21 @@ public class MockTimeProxy : IConsumer
     public async Task<ConsumerMessage[]> Read()
     {
         var time = (DateTime)(currentTime != null ? currentTime : Timing.Now);
-        var response = new Response { time = time };
+        var response = new Response { 
+            time = time,
+            year = time.Year,
+            month = time.Month,
+            day = time.Day,
+            hour = time.Hour,
+            minute = time.Minute,
+            second = time.Second,
+            formatted = time.ToString()
+        };
         var content = Json.Serialize(response);
-        var message = new ConsumerMessage { time = time, content = content };
+        var message = new ConsumerMessage { 
+            time = time,
+            content = content 
+        };
         await Task.Delay(BUILT_IN_DELAY_MS);
         LastUpdateTime = response.time.AddMilliseconds(BUILT_IN_DELAY_MS);
         return [message];

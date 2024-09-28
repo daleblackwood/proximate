@@ -2,6 +2,19 @@ namespace Proximate;
 
 public static class Log
 {
+    public static void Init(string environmentName)
+    {
+        if (Env.IsProduction)
+        {
+            SentrySdk.Init(options => {
+                options.Dsn = "https://d850786f0dd55f313242ba791608989f@o4508956393340928.ingest.us.sentry.io/4508956398256128";
+                options.Debug = false;
+                options.AutoSessionTracking = true;
+                options.Environment = environmentName;
+            });
+        }
+    }
+
     public static void Verbose(string? s)
     {
         Console.WriteLine(s);

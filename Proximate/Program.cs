@@ -82,17 +82,12 @@ internal class Program
 
     static void Main(string[] args)
     {
-        Log.Info($"Proximate init.");
         var environmentName = Env.GetOperationMode().ToString() + " " + IPAddress.Any.ToString();
         if (Env.IsTestEnvironment == false)
         {
-            SentrySdk.Init(options => {
-                options.Dsn = "https://d850786f0dd55f313242ba791608989f@o4508956393340928.ingest.us.sentry.io/4508956398256128";
-                options.Debug = false;
-                options.AutoSessionTracking = true;
-                options.Environment = environmentName;
-            });
+           Log.Init(environmentName);
         }
+        Log.Info($"Proximate init.");
         Log.Info($"Running Proximate as {environmentName}...");
         SetupProxies();
         SetupWebServer();

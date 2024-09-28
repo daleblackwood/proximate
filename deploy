@@ -4,7 +4,7 @@ set -e
 APP_DIR="Proximate"
 DEPLOY_DIR="./Proximate.Deploy"
 IMAGE_NAME="proximate"
-STACK="dev2"
+STACK="dev"
 ENV_FILE="$DEPLOY_DIR/artefacts/$STACK.env"
 APP_PATH="/app/proximate/"
 

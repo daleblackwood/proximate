@@ -79,11 +79,11 @@ public class Snapshotter
     public uint KeyCount { get; private set; } = 0u;
     public ulong MemorySize { get; private set; } = 0u;
     
-    public Snapshot? AddValue(DateTime time, string value, bool isKey)
+    public Snapshot? AddValue(DateTime time, string value, bool allowKey)
     {
-        if (snapshots.Count < 2)
+        if (snapshots.Count < 1)
         {
-            isKey = true;
+            allowKey = true;
         }
 
         var prev = ReadValueAtIndex(snapshots.Count - 1);
@@ -94,15 +94,23 @@ public class Snapshotter
         var snapshot = new Snapshot
         {
             Time = time,
-            IsKey = isKey,
+            IsKey = allowKey,
             Value = value
         };
 
-        if (isKey == false)
+        if (snapshot.IsKey == false)
         {
             try
             {
-                snapshot.Value = StringDiff.Calculate(prev!.Value, value);
+                var patch = StringDiff.Calculate(prev!.Value, value);
+                if (patch.Length < value.Length) 
+                {
+                    snapshot.Value = patch;
+                }
+                else
+                {
+                    snapshot.IsKey = true;
+                }
             }
             catch (Exception ex)
             {
@@ -114,7 +122,7 @@ public class Snapshotter
         snapshots.Add(snapshot);
         MemorySize += (ulong)snapshot.Length;
         Count++;
-        if (isKey)
+        if (snapshot.IsKey)
         {
             KeyCount++;
         }
