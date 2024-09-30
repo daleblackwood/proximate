@@ -178,7 +178,7 @@
     let results = {};
     let nextUpdateTime = 0;
 
-    const headerFields = ["head", "last", "first", "polled", "next", "log", "in-memory", "snapshots", "keys"];
+    const headerFields = ["head", "last", "first", "polled", "next", "log", "in-memory", "snapshots", "ks"];
     const MS_SECOND = 1000;
     const MS_MINUTE = MS_SECOND * 60;
     const MS_HOUR = MS_MINUTE * 60;
@@ -455,19 +455,16 @@
         return p + (dt / MS_SECOND).toFixed(decimals) + " sec";
     }
 
-    function dom(tagOrElement, attrs, children) {
-        const el = tagOrElement instanceof HTMLElement ? tagOrElement : document.createElement(tagOrElement);
-        attrs && Object.keys(attrs).forEach(key => 
-            key === "style" ? Object.assign(el.style, attrs.style) :
-            key in el ? el[key] = attrs[key] :
-            el.setAttribute(key, attrs[key]));
-        ((children instanceof Array ? children : children) || [])?.forEach(x => x && el.appendChild(x));
+    function dom(tagOrEl, props, children) {
+        const el = tagOrEl instanceof HTMLElement ? tagOrEl : document.createElement(tagOrEl);
+        props && Object.entries(props).forEach(([k, v]) => 
+            k === "style" ? Object.assign(el.style, v) : k in el ? el[k] = v : el.setAttribute(k, v));
+        (Array.isArray(children) ? children : [children]).forEach(x => x && el.appendChild(x));
         return el;
     }
 
     function cls(elem, className, on) {
-        elem.classList.remove(className);
-        if (on) elem.classList.add(className);
+        on ? elem.classList.add(className) : elem.classList.remove(className);
     }
 
     init();

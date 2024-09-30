@@ -1,7 +1,17 @@
+using System.Diagnostics;
+
 namespace Proximate;
 
 public static class Log
 {
+    public enum LogLevel
+    {
+        Debug = 0,
+        Info,
+        Warning,
+        Error
+    }
+
     public static void Init(string environmentName)
     {
         if (Env.IsProduction)
@@ -15,44 +25,46 @@ public static class Log
         }
     }
 
-    public static void Verbose(string? s)
-    {
-        Console.WriteLine(s);
-    }
+    private static readonly LogLevel RecordLevel = LogLevel.Warning;
 
-    public static void Info(string? s)
+    public static void LogLine(string? s, LogLevel level)
     {
-        Console.WriteLine(s);
-        if (SentrySdk.IsEnabled && string.IsNullOrEmpty(s) == false)
+        var prefix = level >= LogLevel.Warning ? Enum.GetName(level) + ": " : "";
+        Console.WriteLine(prefix + s);
+        if (level >= RecordLevel && SentrySdk.IsEnabled && string.IsNullOrEmpty(s) == false)
         {
-            SentrySdk.CaptureMessage(s, SentryLevel.Info);
+            var sentryLevel = SentryLevel.Info;
+            if (level >= LogLevel.Error)
+            {
+                sentryLevel = SentryLevel.Error;
+            }
+            if (level >= LogLevel.Warning)
+            {
+                sentryLevel = SentryLevel.Warning;
+            }
+            SentrySdk.CaptureMessage(s, sentryLevel);
         }
     }
 
-     public static void Warn(string? s)
-    {
-        Console.WriteLine("WARNING: " + s);
-        if (SentrySdk.IsEnabled)
-        {
-            SentrySdk.CaptureMessage(s ?? "Unknown Warning", SentryLevel.Warning);
-        }
-    }
+    public static void Debug(string? s) => LogLine(s, LogLevel.Debug);
 
-    public static void Error(string? s)
-    {
-        Console.WriteLine("ERROR: " + s);
-        if (SentrySdk.IsEnabled)
-        {
-            SentrySdk.CaptureMessage(s ?? "Unknown Error", SentryLevel.Error);
-        }
-    }
+    public static void Info(string? s) => LogLine(s, LogLevel.Info);
 
-    public static void Error(Exception e)
+     public static void Warn(string? s) => LogLine(s, LogLevel.Warning);
+
+    public static void Error(string? s) => LogLine(s, LogLevel.Error);
+
+    public static void Error(Exception e) => LogLine(e.Message, LogLevel.Error);
+
+    public static double TimingBegin() => (Timing.Now - Timing.Epoch).TotalSeconds;
+
+    public static void TimingWarn(double beginTime, double maxDuration, string operation, LogLevel level = LogLevel.Warning)
     {
-        Console.WriteLine("ERROR: EXCEPTION: " + e.Message);
-        if (SentrySdk.IsEnabled)
+        var duration = TimingBegin() - beginTime;
+        if (duration > maxDuration)
         {
-            SentrySdk.CaptureException(e);
+            var msg = string.Format("%s exceeded max duration %ds: took %ds", operation, maxDuration, duration);
+            LogLine(msg, level);
         }
     }
 }

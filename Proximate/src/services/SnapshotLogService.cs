@@ -1,5 +1,3 @@
-using Swan;
-
 namespace Proximate;
 
 public class SnapshotLogService : Service

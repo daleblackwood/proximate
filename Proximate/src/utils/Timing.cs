@@ -1,5 +1,3 @@
-using Swan;
-
 namespace Proximate;
 
 public static class Timing
@@ -15,6 +13,12 @@ public static class Timing
     }
 
     public static DateTime Epoch => DateTime.UnixEpoch;
+    public static DateTime Start { get; private set; }
+
+    public static void Init()
+    {
+        Start = DateTime.UtcNow;
+    }
 
     public static DateTime Until(TimeSpan span)
     {

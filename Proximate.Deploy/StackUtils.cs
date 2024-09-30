@@ -72,32 +72,6 @@ public static class StackUtils
         });
     }
 
-    public static void RunShellCommand(string command)
-    {
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = "bash",
-            Arguments = $"-c \"{command}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-
-        using (var process = Process.Start(processStartInfo))
-        {
-            if (process != null)
-            {
-                process.OutputDataReceived += (sender, args) => Console.WriteLine(args.Data);
-                process.ErrorDataReceived += (sender, args) => Console.WriteLine(args.Data);
-
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                process.WaitForExit();
-            }
-        }
-    }
-
     public static string RequireEnvVar(string key)
     {
         var value = Environment.GetEnvironmentVariable(key);

@@ -164,7 +164,7 @@ public class ApiConsumer : IConsumer
                 response = await client.GetAsync(appledUrl);
             }
             var duration = Timing.Since(time).TotalMilliseconds;
-            Log.Verbose($"Fetched from {appledUrl} in {duration}ms.");
+            Log.Debug($"Fetched from {appledUrl} in {duration}ms.");
             var code = response.EnsureSuccessStatusCode()?.StatusCode;
             if (code != HttpStatusCode.OK)
             {

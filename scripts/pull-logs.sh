@@ -2,7 +2,8 @@
 echo "[PULL LOGS]"
 set -e
 
-[[ -z $1 ]] || source "Proximate.Deploy/artefacts/$1.deployment.sh"
+STACK="$1"
+[[ -z $STACK ]] || source "Proximate.Deploy/artefacts/$STACK.deployment.sh"
 
 INSTANCE_IP="${INSTANCE_IP:-$DEPLOYMENT_INSTANCE_IP}"; 
 [[ -z "$INSTANCE_IP" ]] && { echo "Error: INSTANCE_IP is not set or deployment not found."; exit 1; }
@@ -30,7 +31,7 @@ if [ $TIMESTAMPED -ne 0 ]; then
     TS_FORMAT="%Y-%m-%dT%H:%M:%S"
 fi
 
-TARBALL_NAME="ps_$(date +$TS_FORMAT)_${SANITIZED_HOSTNAME}.tar.gz"
+TARBALL_NAME="ps_${STACK}_${SANITIZED_HOSTNAME}_$(date +$TS_FORMAT).tar.gz"
 
 echo "Compressing logs on $INSTANCE_IP..."
 ssh -i "$CERT_PATH" "$REMOTE_USER@$INSTANCE_IP" "tar -czf /tmp/$TARBALL_NAME -C $(dirname "$REMOTE_DIR") $(basename "$REMOTE_DIR")"

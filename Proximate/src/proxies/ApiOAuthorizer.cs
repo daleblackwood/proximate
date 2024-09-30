@@ -66,7 +66,7 @@ public class ApiOAuthorizer : IAuthorizer
         {
             try
             {
-                Log.Verbose($"Getting access token from {tokenUrl}...");
+                Log.Debug($"Getting access token from {tokenUrl}...");
                 var formData = grantType == "password"
                     ? new Dictionary<string, string>
                     {

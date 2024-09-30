@@ -227,18 +227,18 @@ public abstract class Endpoint : WebApiController
         }
     }
 
-    private static Type[]? cahcedTypes = null;
+    private static Type[]? cachedTypes = null;
 
     public static Type[] GetAllTypes()
     {
-        if (cahcedTypes == null)
+        if (cachedTypes == null)
         {
-            cahcedTypes = AppDomain.CurrentDomain.GetAssemblies()
+            cachedTypes = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(x => x.GetTypes())
                 .Where(x => x.IsSubclassOf(typeof(Endpoint)))
                 .ToArray();
         }
-        return cahcedTypes;
+        return cachedTypes;
     }
 
     public static string GetRouteFromUri(Uri uri)

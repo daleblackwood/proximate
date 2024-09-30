@@ -27,18 +27,18 @@ public class PlaybackEndpoint : Endpoint
 
         if (snapshot != null)
         {
-            context.SetHeader("Head", Format.DateTime(snapshot.Time.AddSeconds(-delay)));
+            context.SetHeader("Head", DateUtils.Format(snapshot.Time.AddSeconds(-delay)));
         }
 
         var logTime = Services.Get<SnapshotLogService>().GetLogTime(project);
 
-        context.SetHeader("First", Format.DateTime(recorder.FirstUpdateTime));
-        context.SetHeader("Last", Format.DateTime(recorder.LastSnapshotTime));
-        context.SetHeader("Polled", Format.DateTime(recorder.LastUpdateTime));
-        context.SetHeader("Next", Format.DateTime(recorder.NextUpdateTime));
+        context.SetHeader("First", DateUtils.Format(recorder.FirstUpdateTime));
+        context.SetHeader("Last", DateUtils.Format(recorder.LastSnapshotTime));
+        context.SetHeader("Polled", DateUtils.Format(recorder.LastUpdateTime));
+        context.SetHeader("Next", DateUtils.Format(recorder.NextUpdateTime));
         context.SetHeader("In-Memory", $"{Math.Ceiling((double)(recorder.MemorySize / 1024) / 1024 * 100) / 100.0}mb");
         context.SetHeader("Keys", recorder.KeyshotCount.ToString());
-        context.SetHeader("Log", Format.DateTime(logTime));
+        context.SetHeader("Log", DateUtils.Format(logTime));
         context.SetHeader("Snapshots", recorder.SnapshotCount.ToString());
 
         var attemptsLeft = 10;

@@ -69,7 +69,9 @@ public class ConsumerRecorder
         if (!IsRunning) return;
         IsUpdating = true;
 
+        var lt = Log.TimingBegin();
         var messages = await Consumer.Read();
+        Log.TimingWarn(lt, 5, "Consumer Read: " + Consumer.Id);
         if (messages.Length > 0)
         {
             if (FirstUpdateTime == Timing.Epoch)
@@ -90,7 +92,7 @@ public class ConsumerRecorder
         }
         LastSnapshot = Snapshotter.GetLastSnapshot();
         LastKeySnapshot = Snapshotter.GetLastKeySnapshot();
-        Log.Verbose($"snapshots count: {Snapshotter.Count} last update: {Timing.Now}, diff size: {LastSnapshot?.Length ?? 0}, key size: {LastKeySnapshot?.Length ?? 0}");
+        Log.Debug($"snapshots count: {Snapshotter.Count} last update: {Timing.Now}, diff size: {LastSnapshot?.Length ?? 0}, key size: {LastKeySnapshot?.Length ?? 0}");
         IsUpdating = false;
     }
 

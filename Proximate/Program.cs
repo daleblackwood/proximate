@@ -26,8 +26,8 @@ internal class Program
                 Log.Error("Invalid consumer config for file: " + file);
                 return;
             }
-            var proxy = ConsumerFactory.Instance.Build(config);
-            if (proxy == null)
+            var consumer = ConsumerFactory.Instance.Build(config);
+            if (consumer == null)
             {
                 Log.Error("No consumer for file: " + file);
                 return;
@@ -42,7 +42,7 @@ internal class Program
             if (recorder == null)
             {
                 Log.Info($"Now recording consumer: '{id}' {keyStr}...");
-                recorder = new ConsumerRecorder(proxy, pollInterval, keyInterval);
+                recorder = new ConsumerRecorder(consumer, pollInterval, keyInterval);
                 recorderService.Register(id, recorder);
                 recorder.Start();
                 logger.Register(id, recorder.Snapshotter);
@@ -50,7 +50,7 @@ internal class Program
             else
             {
                 Log.Info($"Updated consumer for recorder: '{id}' {keyStr}...");
-                recorder.SetConsumer(proxy);
+                recorder.SetConsumer(consumer);
             }
         };
         monitor.OnRemove += file => {
@@ -82,6 +82,7 @@ internal class Program
 
     static void Main(string[] args)
     {
+        Timing.Init();
         var environmentName = Env.GetOperationMode().ToString() + " " + IPAddress.Any.ToString();
         if (Env.IsTestEnvironment == false)
         {

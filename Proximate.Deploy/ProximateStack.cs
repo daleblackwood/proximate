@@ -1,9 +1,7 @@
-using System.Diagnostics;
 using Pulumi;
 using Pulumi.Aws.S3;
 using Pulumi.Aws.Ec2;
 using Pulumi.Aws.Ec2.Inputs;
-using Pulumi.Aws.ImageBuilder;
 using Awsx = Pulumi.Awsx;
 
 namespace Proximate.Deploy;
