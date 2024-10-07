@@ -2,7 +2,7 @@ using EmbedIO;
 using Proximate;
 
 [AccessRequired]
-public class PlaybackEndpoint : Endpoint
+public class FeedEndpoint : Endpoint
 {
     public override async Task<object> Get(EndpointContext context)
     {

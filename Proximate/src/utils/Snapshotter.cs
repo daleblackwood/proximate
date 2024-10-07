@@ -21,7 +21,7 @@ public class Snapshotter
             return line;
         }
 
-        public static Snapshot Deserialize(string line)
+        public static Snapshot Deserialize(string? line)
         {
             if (string.IsNullOrWhiteSpace(line))
             {

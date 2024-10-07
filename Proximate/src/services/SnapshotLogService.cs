@@ -26,14 +26,6 @@ public class SnapshotLogService : Service
         return LocalDayStart(day).ToString("yyyy-MM-dd");
     }
 
-    public static string GetFilePath(string key, DateTime day)
-    {
-        var dayStr = GetDayLabel(day);
-        var fileName = $"{key}-{dayStr}.log";
-        var filePath = Env.ProjectPath("logs/" + fileName)!;
-        return filePath;
-    }
-
     public DateTime LastDump { get; private set; }
     public DateTime NextDump { get; private set; }
 
@@ -60,6 +52,19 @@ public class SnapshotLogService : Service
             throw new Exception("Directory cannot be written to.");
         }
         Log.Info("Logging to " + dirName);
+    }
+
+    public string GetFilePath(string key, DateTime day)
+    {
+        var dayStr = GetDayLabel(day);
+        var fileName = $"{key}-{dayStr}.log";
+        var filePath = Path.Combine(GetLogDirectory(), fileName!);
+        return filePath;
+    }
+
+    public string GetLogDirectory()
+    {
+        return Env.ProjectPath("logs");
     }
 
     public SnapshotLogState Register(string id, Snapshotter snapshotter)

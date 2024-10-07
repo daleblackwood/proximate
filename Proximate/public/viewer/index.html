@@ -1,474 +1,56 @@
 <!DOCTYPE html>
 <html data-theme="dark">
 <head>
-
 <title>Proximate Debugger</title>
-<link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
->
-
+<link rel="stylesheet" href="viewer/styles.css"/>
 <style>
-
     :root {
-        --success-fg: #88dd88;
-        --error-fg: #cc7777;
-        --pico-font-size: 13pt;
+        --header-height: 70px;
     }
-
-    body, html { padding: 0; margin: 0; }
-    * { box-sizing: border-box; }
-
-    body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-        min-height: 100vh; 
-        overflow: hidden;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-        font-weight: 700;
-    }
-
-    input, button {
-        font-size: inherit;
-    }
-
-    code {
-        width: 100%;
-        margin-bottom: 1em;
-        white-space: pre;
-        line-height: 1.3em;
-        position: relative;
-        border-bottom: 4px solid #FFFFFF22;
-
-        &.collapsed {
-            cursor: pointer;
-            transition: max-height 0.2s linear;
-            max-height: 100vh;
-        }
-
-        &.collapsed:not(:hover) {
-            max-height: 1.9em;
-            overflow: hidden;
-            border-bottom: 1px dashed #FFFFFF22;
-        }
-
-        &.collapsed::after {
-            content: "...";
-            position: absolute;
-            right: 0;
-            bottom: 0;
-        }
-    }    
-
-    body > main {
-        width: calc(100vw - 2em);
-        min-height: calc(100vh - 2em);
-        border: 1px solid rgba(0,0,0,0.1);
-        box-shadow: 0 5px 60px rgba(0,0,0,0.2);;
-        margin: 20px auto 0;
+    body > header {
+        padding: 1.8rem;
         display: flex;
-        gap: 1em;
-        padding: 1em;
-        margin: 0.5em;
-        height: 100%;
-        --nav-width: 250px;
+        justify-content: space-between;
+        height: var(--header-height);
+        background-color: #00000088;
 
-        > main {
-            display: block;
+        h1 {
             margin: 0;
-            width: calc(100% - var(--nav-width));
-            overflow: scroll;
+            font-size: 24px;
         }
 
-        > menu {
-            all: unset;
-            width: var(--nav-width);
-            flex-direction: column;
-            justify-content: start;
-
-            > div {
-                margin: 0;
-            }
-
-            label {
-                display: flex;
-                justify-content: space-between;
-
-                > span {
-                    font-family: monospace;
-                    color: var(--success-fg);
-                }
-
-                &.provisional > span {
-                    opacity: 0.5;
-                }
-            }
-
-            input, select {
-                width: 100%;
+        menu {
+            margin: 0;
+            a {
+                padding: 0 1rem;
             }
         }
     }
-
-    #printout {
-        transition: opacity 0.2s linear;
+    body > iframe {
+        width: 100%;
+        height: calc(100vh - var(--header-height));
     }
-
-    #blocker {
-        position: fixed;
-        inset: 0px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        overflow-y: auto;
-        background: #00000088;
-    }
-
-    #blocker > main {
-        width: fit-content;
-        min-width: 400px;
-        height: fit-content;
-        padding: 1.5rem 2rem 2rem;
-        display: flex;
-        flex-direction: column;
-        background: var(--pico-background-color);
-    }
-
-    #blocker > main > h3 {
-        margin: 0 0 0.5em;
-        text-align: center;
-    }
-
 </style>
-
 </head>
-
 <body>
-<main>
-    <main id="printout">
-        <code id="head" class="collapsed"></code>
-        <code id="body"></code>
-    </main>
-    <menu>
-        <div>
-            <label for="endpoint">Endpoint <span></span></label>
-            <select id="endpoint" onchange="setEndpoint(this.value)"></select>
-        </div>
-        <div id="delay-params">
-            <label for="delay">Delay (Mins)<span></span></label>
-            <input id="delay" type="range" min="0" max="1" step="0.000001" value="0" onchange="handleDelay(this.value, true)" oninput="handleDelay(this.value, false)" />
-        </div>
-    </menu>
-</main>
+<header>
+    <h1>Proximate Debugger</h1>
+    <menu></menu>
+</header>
+<iframe name="main" src="viewer/feeds.html"></iframe>
+<script src="viewer/common.js"></script>
 <script>
-    "use strict";
-
-    let delayMs = 0;
-    let endpointSelector = document.querySelector("select[id=endpoint]");
-    let endpoint = endpointSelector.value;
-    let timer = 0;
-    let isUpdating = false;
-    let isLoaded = false;
-    let data;
-    let jsv;
-    let printout = document.getElementById("printout");
-    let results = {};
-    let nextUpdateTime = 0;
-
-    const headerFields = ["head", "last", "first", "polled", "next", "log", "in-memory", "snapshots", "ks"];
-    const MS_SECOND = 1000;
-    const MS_MINUTE = MS_SECOND * 60;
-    const MS_HOUR = MS_MINUTE * 60;
-    const MS_DAY = MS_HOUR * 24;
-    const MS_WEEK = MS_DAY * 7;
-    const MS_YEARLIKE = MS_DAY * 365;
-
-    const DURATION_MIN = MS_SECOND;
-    const DURATION_MAX = MS_DAY * 2;
-    const POLL_INTERVAL = 15000;
-
-    function init() {
-        load().catch(showLogin);
+    const menu = document.querySelector("body > header > menu");
+    const frame = document.querySelector("body > iframe");
+    function launch(key) {
+        window.location.hash = key;
+        frame.src = "/viewer/" + key + ".html?ts=" + Date.now();
     }
-    
-    function showLogin(e) {
-        if (e) console.error(e);
-        setForm("Login", ["email:email", "password:password", "submit:submit"], data => {
-            setBlocker();
-            fetch("/auth", { headers: { 
-                Authorization: `Basic ${btoa(`${data.email}:${data.password}`)}` }
-            }).then(x => {
-                if (x.status === 403) throw new Error("Unknown User")
-                return x.text();
-            }).then(x => {
-                localStorage.setItem("lvt", x);
-                load().catch(showLogin);
-            }).catch(e => setError(e, "Login Error", showLogin));
-        });
-    }
-
-    function setForm(title, fieldNames, onSubmit) {
-        const fields = fieldNames
-            .map(x => x.split(":"))
-            .map(([name, type = "text"]) => dom("input", {
-                name,
-                type
-            }));
-        const form = dom("form", {
-            onsubmit: e => {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                const data = {};
-                for (const field of fields) {
-                    data[field.name] = field.value;
-                }
-                onSubmit(data);
-                return false;
-            }
-        }, fields);
-        setBlocker(form, title);
-        return { form, fields };
-    }
-
-    function setError(error, title, onClick) {
-        const btn = dom("button", {
-            innerText: "OK",
-            onclick: e => {
-                e.preventDefault()
-                onClick && onClick();
-            }
-        });
-        setBlocker(btn, title || "Error", (error?.message ? error.message : error) || "Error")
-    }
-
-    function setBlocker(elem, title, description) {
-        const id = "blocker";
-        document.getElementById(id)?.remove();
-        if (!elem) return;
-        const blocker = dom("div", { id }, [
-            dom("main", null, [
-                dom("h3", { innerText: title }),
-                dom("p", { innerText: description || "" }),
-                elem
-            ])
-        ])
-        document.body.append(blocker);
-    }
-
-    function api(url, msg) {
-        return fetch(url, {
-            headers: { "Authorization": "Bearer " + localStorage.getItem("lvt") },
-            method: msg ? "POST" : "GET",
-            body: msg ? JSON.stringify(msg) : undefined
-        });
-    }
-
-    function load() {
-        return api("/feeds").then(x => x.json()).then(feeds => {
-            feeds.sort();
-            const preferred = location.hash?.substring(1) || "playback/time";
-            let hasPreffered = false;
-            for (const feed of feeds) {
-                endpointSelector.appendChild(dom("option", { innerText: feed }));
-                if (feed == preferred) {
-                    hasPreffered = true;
-                }
-            }
-            if (hasPreffered) {
-                endpoint = endpointSelector.value = preferred;
-            } else if (!endpoint) {
-                endpoint = feeds[0];
-            }
-            setEndpoint(endpoint);
-            handleDelay(0, true);
-        });
-    }
-
-    function update(setTicks) {
-        if (Number.isFinite(setTicks)) {
-            nextUpdateTime = 0;
-            clearInterval(timer);
-            timer = setInterval(update, 100);
-        }
-        if (nextUpdateTime < Date.now()) {
-            nextUpdateTime = Date.now() + POLL_INTERVAL;
-            nextTick();
-        } else {
-            updateLabels();
-            displayResults(endpoint);
-        }
-    }
-
-    function updateLabels() {
-        setLabel("delay", formatSince(Date.now() + delayMs));
-        setLabel("endpoint", endpoint);
-        setLabel("poll-in", formatSince(nextUpdateTime), 0);
-        document.getElementById("delay-params").style.display = endpoint.startsWith("playback") ? "block" : "none";
-        printout.style.opacity = isLoaded ? "1.0" : "0.5";
-    }
-
-    function nextTick() {
-        if (isUpdating) return;
-        if (!document.hasFocus()) return;
-        isUpdating = true;
-        isLoaded = false;
-        const url = `/${endpoint}?delay=${delayMs / 1000}`;
-        updateLabels();
-        setLabel("status", "polling");
-        const requestStart = new Date();
-        api(url).then(x => {
-            const { headers, status } = x;
-            return x.text()
-                .then(text => ({ headers, status, text }))
-                .catch(e => ({ headers, status, text: "error" }));
-        })
-        .then(({ headers, status, text }) => {
-            const isError = text === "error";
-            isLoaded = true;
-            results[endpoint] = { headers, status, text, isLoaded, isError, date: Date.now() };
-            displayResults(endpoint, true);
-            nextUpdateTime = Date.now() + POLL_INTERVAL;
-        })
-        .catch(e => {
-            isLoaded = false;
-            console.error(e);
-            updateLabels();
-            setLabel("status", "error"); 
-        })
-        .finally(_ => isUpdating = false);
-    }
-
-    let lastDisplay = { endpoint: "", date: 0 };
-
-    function displayResults(endpoint, nowLoaded) {
-        const elHead = document.querySelector("code#head");
-        const elBody = document.querySelector("code#body");
-        const result = results[endpoint];
-        if (result) {
-            const { headers, status, text, isError, date } = result;
-            if (endpoint === lastDisplay.endpoint && date === lastDisplay.date)
-                return;
-            lastDisplay = { endpoint, date };
-            if (typeof nowLoaded === "boolean") {
-                isLoaded = nowLoaded;
-                 if (isLoaded) {
-                    setLabel("status", "idle"); 
-                }
-            }
-            let str = "";
-            if (headers) {
-                str += "Headers:\n";
-                for (const pair of headers.entries()) {
-                    str += "  " + pair[0] + "=" + pair[1] + "\n";
-                }
-            }
-            elHead.innerText = str;
-            str = "";
-            if (text && text?.match(/^\s*[\{\[]/)) {
-                str += JSON.stringify(JSON.parse(text), null, "  ");
-            } else {
-                str += "(empty)";
-            }
-            elBody.innerText = str;
-            const requestEnd = new Date();
-            updateLabels();
-            for (const field of headerFields) {
-                setLabel(field, headers.get(field))
-            }
-        } else {
-            updateLabels();
-            for (const field of headerFields) {
-                setLabel(field, "");
-            }
-            elHead.innerText = "";
-            elBody.innerText = "";
-        }
-    }
-
-    function setLabel(label, value) {
-        value = String(value || "")
-        const container = document.querySelector("main > menu");
-        let elem = container.querySelector(`label[for=${label}]`);
-        if (!elem) {            
-            elem = dom("label", { for: label, innerText: label })
-            container.appendChild(dom("div", null, [elem]));
-        }
-        let span = elem.querySelector("span") || elem.appendChild(dom("span"));
-        const dateMatch = value?.match(/\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d/);
-        if (dateMatch) {
-            value = formatSince(value);
-        }
-        span.innerText = value;
-        return elem;
-    }
-
-    function handleDelay(value, doUpdate = false) {
-        delayMs = value * value * value * (DURATION_MAX - DURATION_MIN) + DURATION_MIN;
-        const lbl = setLabel("delay", formatSince(Date.now() + delayMs));
-        cls(lbl, "provisional", !doUpdate);
-        if (doUpdate) update(0);
-    }
-
-    function setEndpoint(value) {
-        if (endpoint !== value) {
-            endpoint = value;
-            displayResults(results[endpoint], false);
-            update(0);
-            location.hash = endpoint
-        }
-    }
-
-    function getData() {
-        return data;
-    }
-
-    function formatDuration(seconds) {
-        seconds = Math.floor(seconds);
-        return formatTime(seconds / 3600, seconds / 60 % 60, seconds % 3600);
-    }
-        
-    function formatTime(hours, minutes, seconds) {
-        return [hours, minutes, seconds]
-            .filter(Boolean)
-            .map((x, i) => i === 0 ? x : String(x).padStart(2, "0"))
-            .join(":");
-    }
-
-    function formatDateTime(d) {
-        if (typeof d === "string") d = new Date(d);
-        if (!d || Number.isNaN(d.getTime())) return "-";
-        return `${formatTime(d.getHours(), d.getMinutes(), d.getSeconds())} ${d.getDate()}/${d.getMonth() + 1}`;
-    }
-
-    function formatSince(d, decimals = 1) {
-        let dt = (typeof d === "string" ? d = new Date(d) : d).valueOf() - Date.now();
-        const p = dt >= 0 ? "+" : "-";
-        dt = Math.abs(dt);
-        if (dt > MS_YEARLIKE * 0.5) return p + (dt / MS_YEARLIKE).toFixed(decimals) + " years";
-        if (dt > MS_WEEK * 2) return p + (dt / MS_WEEK).toFixed(decimals) + " weeks";
-        if (dt > MS_DAY * 2) return p + (dt / MS_DAY).toFixed(decimals) + " days";
-        if (dt > MS_HOUR * 2) return p + (dt / MS_HOUR).toFixed(decimals) + " hrs";
-        if (dt > MS_MINUTE * 2) return p + (dt / MS_MINUTE).toFixed(decimals) + " min";
-        return p + (dt / MS_SECOND).toFixed(decimals) + " sec";
-    }
-
-    function dom(tagOrEl, props, children) {
-        const el = tagOrEl instanceof HTMLElement ? tagOrEl : document.createElement(tagOrEl);
-        props && Object.entries(props).forEach(([k, v]) => 
-            k === "style" ? Object.assign(el.style, v) : k in el ? el[k] = v : el.setAttribute(k, v));
-        (Array.isArray(children) ? children : [children]).forEach(x => x && el.appendChild(x));
-        return el;
-    }
-
-    function cls(elem, className, on) {
-        on ? elem.classList.add(className) : elem.classList.remove(className);
-    }
-
-    init();
-
+    ["feeds", "logs"].map(x => menu.appendChild(dom("a", {
+        href: "#" + x,
+        innerText: x,
+        onclick: () => launch(x)
+    })));
 </script>
 </body>
 </html>

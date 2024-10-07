@@ -39,20 +39,20 @@ public class SnapshotLoggerTest
         // check deserialized values for second last line
         var expectedSnapshot = snapshotter.GetStoredSnapshot(snapshotter.GetStoredSnapshotCount() - 2)!;
         var expectedLine = expectedSnapshot.Serialize()!;
-        var lastSnap = SnapshotLogReader.ReadLastSnapshot(outFile);
+        var lastSnap = Snapshotter.Snapshot.Deserialize(LogReadUtils.ReadLastLine(outFile).line);
         Assert.Equal(expectedSnapshot.Time, lastSnap?.Time);
         Assert.Equal(expectedSnapshot.Value, lastSnap?.Value);
         Assert.Equal(expectedSnapshot.IsKey, lastSnap?.IsKey);
 
         // check deserialized string for second last line
-        var lastLineStr = SnapshotLogReader.ReadLastLineText(outFile);
-        Assert.Equal(expectedLine, lastLineStr);
+        var lastLineStr = LogReadUtils.ReadLastLine(outFile);
+        Assert.Equal(expectedLine, lastLineStr.line);
 
         // dump again and check last line
         outFile = logger.DumpSnapshot("test", entry, date, date.AddYears(1000));
         Assert.True(string.IsNullOrEmpty(outFile) == false, "should have a good snapshot filename");
         expectedSnapshot = snapshotter.GetStoredSnapshot(snapshotter.GetStoredSnapshotCount() - 1)!;
-        lastSnap = SnapshotLogReader.ReadLastSnapshot(outFile);
+        lastSnap = Snapshotter.Snapshot.Deserialize(LogReadUtils.ReadLastLine(outFile).line);
         Assert.Equal(expectedSnapshot.Time, lastSnap?.Time);
         Assert.Equal(expectedSnapshot.Value, lastSnap?.Value);
         Assert.Equal(expectedSnapshot.IsKey, lastSnap?.IsKey);

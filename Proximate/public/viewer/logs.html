@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+<title>Proximate Debugger: Logs</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<main>
+    <main id="printout">
+        <code id="head" class="collapsed"></code>
+        <code id="body"></code>
+    </main>
+    <menu>
+        <div>
+            <label for="endpoint">Log <span></span></label>
+            <select id="endpoint" onchange="setEndpoint(this.value)"></select>
+        </div>
+        <div>
+            <label for="date">Start<span></span></label>
+            <input id="start" name="start" type="datetime-local" onchange="handleDate(this.value, true)" oninput="handleDate(this.value, true)" onkeypress="handleDate(this.value, true)"/>        </div>
+        <div id="delay-params">
+            <label for="delay">Offset (Mins)<span></span></label>
+            <input id="delay" type="range" min="0" max="1" step="0.000001" value="0" onchange="handleDelay(this.value, true)" oninput="handleDelay(this.value, false)" />
+        </div>
+    </menu>
+</main>
+<script src="common.js"></script>
+<script>
+    "use strict";
+
+    const DURATION_MIN = 0;
+    const DURATION_MAX = MS_HOUR * 12;
+
+    let startTime = new Date().getTime() - 1000;
+    let delayMs = 0;
+    let lastUpdateTime = 0;
+    let endpointSelector = document.querySelector("select[id=endpoint]");
+    let dateSelector = document.querySelector("input[name=start]")
+    let endpoint = endpointSelector.value;
+    let timer = 0;
+    let isUpdating = false;
+    let isLoaded = false;
+    let data;
+    let results = {};
+    const headerFields = ["index", "time"];
+
+    function init() {
+        load().catch(showLogin).then(update);
+    }
+
+    function load() {
+        return api("/logs").then(x => x.json()).then(endpoints => {
+            endpoints.sort();
+            const preferred = location.hash?.substring(1);
+            let hasPreffered = false;
+            for (const endpoint of endpoints) {
+                endpointSelector.appendChild(dom("option", { innerText: endpoint }));
+                if (endpoint == preferred) {
+                    hasPreffered = true;
+                }
+            }
+            if (hasPreffered) {
+                endpoint = endpointSelector.value = preferred;
+            } else if (!endpoint) {
+                endpoint = endpoints[0];
+            }
+            setEndpoint(endpoint);
+        });
+    }
+
+    function updateLabels() {
+        setLabel("delay", formatTime(getHeadTime()));
+        dateSelector.value = formatLocalIsoDate(getStartTime());
+    }
+
+    function update() {
+        clearTimeout(timer);
+        try { tick(); } catch (e) { console.error(e); }
+        updateLabels();
+        displayResults(endpoint);
+        timer = setTimeout(update, 1000);
+    }
+
+    function tick() {
+        if (isUpdating) return;
+        if (!document.hasFocus()) return;
+        isUpdating = true;
+        isLoaded = false;
+        const requestStart = Date.now();
+        if (lastUpdateTime) {
+            delayMs += requestStart - lastUpdateTime;
+        }
+        const date = getHeadTime().toISOString();
+        const url = `/log/${endpoint}?date=${date}`;
+        updateLabels();
+        setLabel("status", "polling");
+        api(url).then(x => {
+            const { headers, status } = x;
+            return x.text()
+                .then(text => ({ headers, status, text }))
+                .catch(e => ({ headers, status, text: "error" }));
+        })
+        .then(({ headers, status, text }) => {
+            const isError = text === "error";
+            isLoaded = true;
+            results[endpoint] = { headers, status, text, isLoaded, isError, date: Date.now() };
+            displayResults(endpoint, true);
+            lastUpdateTime = Date.now();
+        })
+        .catch(e => {
+            isLoaded = false;
+            console.error(e);
+            updateLabels();
+            setLabel("status", "error"); 
+        })
+        .finally(_ => isUpdating = false);
+    }
+
+    let lastDisplay = { endpoint: "", date: 0 };
+
+    function displayResults(endpoint, nowLoaded) {
+        const elHead = document.querySelector("code#head");
+        const elBody = document.querySelector("code#body");
+        const result = results[endpoint];
+        if (result) {
+            const { headers, status, text, isError, date } = result;
+            if (endpoint === lastDisplay.endpoint && date === lastDisplay.date)
+                return;
+            lastDisplay = { endpoint, date };
+            if (typeof nowLoaded === "boolean") {
+                isLoaded = nowLoaded;
+                 if (isLoaded) {
+                    setLabel("status", "idle"); 
+                }
+            }
+            let str = "";
+            if (headers) {
+                str += "Headers:\n";
+                for (const pair of headers.entries()) {
+                    str += "  " + pair[0] + "=" + pair[1] + "\n";
+                }
+            }
+            elHead.innerText = str;
+            str = "";
+            if (text && text?.match(/^\s*[\{\[]/)) {
+                str += JSON.stringify(JSON.parse(text), null, "  ");
+            } else {
+                str += "(empty)";
+            }
+            elBody.innerText = str;
+            const requestEnd = new Date();
+            updateLabels();
+            for (const field of headerFields) {
+                setLabel(field, headers.get(field))
+            }
+        } else {
+            updateLabels();
+            for (const field of headerFields) {
+                setLabel(field, "");
+            }
+            elHead.innerText = "";
+            elBody.innerText = "";
+        }
+    }
+
+    function getHeadTime() {
+        const startTime = getStartTime();
+        return new Date(startTime.getTime() + delayMs);
+    }
+
+    function getStartTime() {
+        return new Date(startTime || Date.now());
+    }
+
+    function handleDelay(value, doUpdate = false) {
+        delayMs = value * value * value * (DURATION_MAX - DURATION_MIN) + DURATION_MIN;
+        const lbl = setLabel("delay", formatTime(getHeadTime()));
+        cls(lbl, "provisional", !doUpdate);
+        if (doUpdate) update();
+    }
+
+    function handleDate(value, doUpdate = false) {
+        console.log("date", value);
+        startTime = value;
+        if (doUpdate) update();
+    }
+
+    function setEndpoint(value) {
+        if (endpoint !== value) {
+            endpoint = value;
+            displayResults(results[endpoint], false);
+            update();
+            location.hash = endpoint
+        }
+    }
+
+    init();
+
+</script>
+</body>
+</html>

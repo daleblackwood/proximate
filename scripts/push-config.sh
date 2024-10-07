@@ -2,10 +2,10 @@
 echo "[PUSH CONFIG]"
 set -e
 
-[[ -z $1 ]] || source "Proximate.Deploy/artefacts/$1.deployment.sh"
+STACK="$1"
+[[ -z $STACK ]] || source "Proximate.Deploy/artefacts/$STACK.deployment.sh"
 
 INSTANCE_IP="${INSTANCE_IP:-$DEPLOYMENT_INSTANCE_IP}"; 
-[[ -z "$INSTANCE_IP" ]] && { echo "Error: INSTANCE_IP is not set or deployment not found."; exit 1; }
 
 CERT_PATH="Proximate.Deploy/artefacts/cert"
 [[ -f "$CERT_PATH" ]] || { echo "Error: certificate is not present."; exit 1; }

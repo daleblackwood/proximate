@@ -205,7 +205,7 @@ public abstract class Endpoint : WebApiController
         }
         catch (Exception e)
         {
-            var code = 400;
+            var code = (int)HttpStatusCode.InternalServerError;
             if (e is HttpException he)
             {
                 code = he.StatusCode;
