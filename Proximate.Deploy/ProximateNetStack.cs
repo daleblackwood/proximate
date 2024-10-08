@@ -6,11 +6,11 @@ using Awsx = Pulumi.Awsx;
 
 namespace Proximate.Deploy;
 
-class ProximateStack : Stack
+class ProximateNetStack : Stack
 {
     public string Prefix { get; private set; }
 
-    public ProximateStack()
+    public ProximateNetStack()
     {
         Prefix = (Deployment.Instance.ProjectName + "-" + Deployment.Instance.StackName).ToLower();
 
@@ -33,18 +33,6 @@ class ProximateStack : Stack
         }).Result;
         var amiId = ami.Id;
 
-        Console.WriteLine("ami", ami.Name);
-
-        var ecr = new Awsx.Ecr.Repository(Prefix + "-repo", new() {
-            ForceDelete = true
-        });
-        var image = new Awsx.Ecr.Image(Prefix + "-image", new Awsx.Ecr.ImageArgs() {
-            RepositoryUrl = ecr.Url,
-            Context = "../Proximate",
-            Platform = "linux/arm64",
-            ImageTag = "latest"
-        });
-
         var instance = new Instance(Prefix + "-inst", new() {
             Tags = StackUtils.GetTags(Prefix + "-inst"),
             VolumeTags = StackUtils.GetTags(Prefix + "-volume"),
@@ -52,14 +40,6 @@ class ProximateStack : Stack
             Ami = amiId,
             VpcSecurityGroupIds = new[] { securityGroup.Id },
             KeyName = keyPair.KeyName,
-            UserData = image.ImageUri.Apply(imageUri => {        
-                var installScript = StackUtils.GetDockerInstallScript(imageUri, Prefix + "-repo", [
-                    "/home/ec2-user/proximate/logs:/app/logs",
-                    "/home/ec2-user/proximate/config:/app/config"
-                ]);
-                File.WriteAllText(StackUtils.ProjectPath("artefacts/docker-install.sh"), installScript);
-                return installScript;
-            }),
             UserDataReplaceOnChange = true
         });
 
@@ -75,8 +55,6 @@ class ProximateStack : Stack
             { "DEPLOYMENT_STACK", Output.Format($"{Deployment.Instance.StackName}") },
             { "DEPLOYMENT_PROJECT", Output.Format($"{Deployment.Instance.ProjectName}") },
             { "DEPLOYMENT_INSTANCE_IP", elasticIp.PublicIp },
-            { "DEPLOYMENT_IMAGE_REPO", ecr.Url },
-            { "DEPLOYMENT_IMAGE_URI", image.ImageUri },
             { "DEPLOYMENT_BUCKET_NAME", bucket.BucketName }
         }, outputs => {
             var str = "";

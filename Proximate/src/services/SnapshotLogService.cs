@@ -160,11 +160,7 @@ public class SnapshotLogService : Service
                 }
             }
             var logSeconds = (DateTime.UtcNow - startTime).Seconds;
-            if (logSeconds < 10.0) 
-            {
-                Log.Info($"Log {storedCount} for {key} in {logSeconds.ToString("0.0")}");
-            }
-            else
+            if (logSeconds >= 10.0) 
             {
                 Log.Warn($"LONG LOG {storedCount} for {key} in {logSeconds.ToString("0.0")}");
             }
