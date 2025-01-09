@@ -62,7 +62,9 @@ function replace() {
 }
 
 function publish() {
-    pull_logs
+    if [ $SKIP_LOGS -ne 1 ]; then
+        pull_logs
+    fi
     image_build
     if [ $? -ne 0 ]; then exit 1; fi
     push_up

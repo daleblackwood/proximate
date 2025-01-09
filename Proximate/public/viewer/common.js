@@ -117,7 +117,9 @@ function formatDateTime(d) {
 }
 
 function formatSince(d, decimals = 1) {
-    let dt = (typeof d === "string" ? d = new Date(d) : d).valueOf() - Date.now();
+    d = typeof d === "string" ? d = new Date(d) : d;
+    if (!d.valueOf()) return "never";
+    let dt = d.valueOf() - Date.now();
     const p = dt >= 0 ? "+" : "-";
     dt = Math.abs(dt);
     if (dt > MS_YEARLIKE * 0.5) return p + (dt / MS_YEARLIKE).toFixed(decimals) + " years";

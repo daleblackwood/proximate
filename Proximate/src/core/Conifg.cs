@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Tommy;
 
 namespace Proximate;
@@ -115,7 +116,7 @@ public class Config
         return this;
     }
 
-    public static Dictionary<string, string> ParseTomlConfig(string toml)
+    public static Dictionary<string, string> ParseTomlConfig(string toml, bool upperCase = true)
     {
         var result = new Dictionary<string, string>();
         using (var reader = new StringReader(toml))
@@ -123,8 +124,21 @@ public class Config
             var table = TOML.Parse(reader);
             foreach (var key in table.Keys)
             {
-                var dictKey = key.ToUpper().Trim();
-                result[dictKey] = table[key];
+                var dictKey = (upperCase ? key.ToUpper() : key).Trim();
+                var value = table[key];
+                if (value.IsTable)
+                {
+                    var substr = "";
+                    foreach (var subkey in value.Keys)
+                    {
+                        substr += subkey + "=" + "\"" + value[subkey] + "\"\n";
+                    }
+                    result[dictKey] = substr;
+                }
+                else
+                {
+                    result[dictKey] = value;
+                }
             }
         }
         return result;

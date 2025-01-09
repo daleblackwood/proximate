@@ -1,4 +1,5 @@
 using System.Net;
+using Tommy;
 
 namespace Proximate;
 
@@ -13,6 +14,7 @@ public class ApiConsumer : IConsumer
         API_CLIENT_SECRET,
         API_REQUEST_BODY,
         API_QUERY,
+        HEADERS,
         POLL_INTERVAL,
         KEY_INTERVAL
     }
@@ -87,6 +89,20 @@ public class ApiConsumer : IConsumer
             {
                 consumer.RequestBody = config.Get(ApiConfigKey.API_REQUEST_BODY);
             }
+
+            var headers = config.Get(ApiConfigKey.HEADERS);
+            if (string.IsNullOrEmpty(headers) == false)
+            {
+                var headerDict = Config.ParseTomlConfig(headers, false);
+                if (headerDict != null)
+                {
+                    foreach (var pair in headerDict)
+                    {
+                        consumer.SetHeader(pair.Key, pair.Value);
+                    }
+                }
+            }
+
             return consumer;
         }
     }

@@ -6,6 +6,6 @@ class Program
 {
     static Task<int> Main(string[] args) 
     {
-        return Deployment.RunAsync<ProximateNetStack>();
+        return Deployment.RunAsync<ProximateDockerStack>();
     }
 }
